@@ -37,6 +37,12 @@ Run "familiar help config location" for more information about the "location" su
 func (configCommand *ConfigCommand) Execute(args []string) error {
 	if len(args) == 0 {
 		// Print the contents of the configuration file.
+		configContents, err := config.GetConfigContents()
+		if err != nil {
+			return err
+		}
+
+		fmt.Println(configContents)
 		return nil
 	}
 
