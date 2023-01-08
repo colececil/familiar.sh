@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"github.com/colececil/familiar.sh/internal/packagemanagers"
 	"gopkg.in/yaml.v3"
 	"os"
 	"strings"
@@ -68,6 +69,10 @@ func GetConfigContents() (string, error) {
 //   - packageManagerName: The name of the package manager to add.
 func AddPackageManager(packageManagerName string) error {
 	return updateConfigFile(func(config *Config) error {
+		if _, err := packagemanagers.GetPackageManager(packageManagerName); err != nil {
+			return fmt.Errorf("package manager not valid")
+		}
+
 		for i := range config.PackageManagers {
 			if config.PackageManagers[i].Name == packageManagerName {
 				return fmt.Errorf("package manager already present")

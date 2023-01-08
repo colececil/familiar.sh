@@ -11,14 +11,17 @@ var projectVersion = "0.0.0"
 
 var versionCommand = &commands.VersionCommand{Version: projectVersion}
 var configCommand = &commands.ConfigCommand{}
+var packageCommand = &commands.PackageCommand{}
 var helpCommand = &commands.HelpCommand{Commands: []commands.Command{
 	versionCommand,
 	configCommand,
+	packageCommand,
 }}
 var commandMap = map[string]commands.Command{
-	"help":    helpCommand,
-	"version": versionCommand,
-	"config":  configCommand,
+	helpCommand.Name():    helpCommand,
+	versionCommand.Name(): versionCommand,
+	configCommand.Name():  configCommand,
+	packageCommand.Name(): packageCommand,
 }
 
 func main() {
