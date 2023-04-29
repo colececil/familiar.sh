@@ -10,16 +10,19 @@ import (
 var projectVersion = "0.0.0"
 
 var versionCommand = &commands.VersionCommand{Version: projectVersion}
+var attuneCommand = &commands.AttuneCommand{}
 var configCommand = &commands.ConfigCommand{}
 var packageCommand = &commands.PackageCommand{}
 var helpCommand = &commands.HelpCommand{Commands: []commands.Command{
 	versionCommand,
+	attuneCommand,
 	configCommand,
 	packageCommand,
 }}
 var commandMap = map[string]commands.Command{
 	helpCommand.Name():    helpCommand,
 	versionCommand.Name(): versionCommand,
+	attuneCommand.Name():  attuneCommand,
 	configCommand.Name():  configCommand,
 	packageCommand.Name(): packageCommand,
 }

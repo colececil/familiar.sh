@@ -17,7 +17,7 @@ func (helpCommand *HelpCommand) Name() string {
 
 // Description returns a short description of the command.
 func (helpCommand *HelpCommand) Description() string {
-	return "List help information"
+	return "List help information."
 }
 
 // Documentation returns detailed documentation for the command.
@@ -42,6 +42,7 @@ Available commands are listed below. Run "familiar help <command>" to get detail
 		for _, command := range helpCommand.Commands {
 			fmt.Printf("  %-15s %s\n", command.Name(), command.Description())
 		}
+		fmt.Println()
 		return nil
 	} else {
 		// A command name was provided - display detailed documentation for the command.

@@ -13,13 +13,15 @@ import (
 //
 // It takes the following parameters:
 //   - program: The name of the program to run.
+//   - printOutput: Whether to print the output of the program.
 //   - resultCaptureRegex: A regular expression that captures the result of the command. If this is nil, the result is
 //     an empty string.
 //   - args: The arguments to pass to the program, if any.
 //
 // It returns the result captured by the regular expression, and an error if one occurred. If no result was captured,
 // the result is an empty string.
-func RunShellCommand(program string, resultCaptureRegex *regexp.Regexp, args ...string) (string, error) {
+func RunShellCommand(program string, printOutput bool, resultCaptureRegex *regexp.Regexp, args ...string) (string,
+	error) {
 	command := exec.Command(program, args...)
 
 	stdout, err := command.StdoutPipe()
@@ -38,8 +40,8 @@ func RunShellCommand(program string, resultCaptureRegex *regexp.Regexp, args ...
 
 	errs := make(chan error)
 	results := make(chan string)
-	go readLines(stdout, resultCaptureRegex, results, errs)
-	go readLines(stderr, resultCaptureRegex, results, errs)
+	go readLines(stdout, printOutput, resultCaptureRegex, results, errs)
+	go readLines(stderr, printOutput, nil, results, errs)
 
 	select {
 	case err := <-errs:
@@ -57,6 +59,11 @@ func RunShellCommand(program string, resultCaptureRegex *regexp.Regexp, args ...
 	default:
 	}
 
+	if command.ProcessState.ExitCode() != 0 {
+		return "", fmt.Errorf("error running command \"%s %s\", with exit code %d", program, args,
+			command.ProcessState.ExitCode())
+	}
+
 	return result, nil
 }
 
@@ -66,20 +73,27 @@ func RunShellCommand(program string, resultCaptureRegex *regexp.Regexp, args ...
 //
 // It takes the following parameters:
 //   - reader: The Reader to read from.
+//   - printOutput: Whether to print the output.
 //   - resultCaptureRegex: A regular expression that captures any results. If this is nil, no results are captured.
 //   - results: The channel to write any results to.
 //   - errs: The channel to write any errors to.
-func readLines(reader io.Reader, resultCaptureRegex *regexp.Regexp, results chan<- string, errs chan<- error) {
+func readLines(reader io.Reader, printOutput bool, resultCaptureRegex *regexp.Regexp, results chan<- string,
+	errs chan<- error) {
 	scanner := bufio.NewScanner(reader)
+
+	var cumulativeOutput = ""
 	for scanner.Scan() {
 		line := scanner.Text()
-
-		if resultCaptureRegex != nil && resultCaptureRegex.MatchString(line) {
-			results <- resultCaptureRegex.FindStringSubmatch(line)[1]
+		cumulativeOutput += line + "\n"
+		if printOutput {
+			fmt.Println(line)
 		}
-
-		fmt.Println(line)
 	}
+
+	if resultCaptureRegex != nil && resultCaptureRegex.MatchString(cumulativeOutput) {
+		results <- resultCaptureRegex.FindStringSubmatch(cumulativeOutput)[1]
+	}
+
 	if err := scanner.Err(); err != nil {
 		errs <- err
 	}

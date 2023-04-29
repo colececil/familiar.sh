@@ -7,7 +7,7 @@ Do you work across multiple machines, but waste a lot of time trying to get them
 Familiar.sh offers the following features:
 
 - It provides a unified interface that serves as an abstraction over multiple commonly used package managers (Apt, Yum, Chocolatey, Scoop, Homebrew, SDKMan, etc.). As you install, update, and uninstall packages, Familiar.sh automatically tracks the changes in its configuration file.
-- With the use of a cloud drive like Google Drive or Microsoft OneDrive, your Familiar.sh configuration can be shared and synced across multiple machines. Then just run `familiar sync` to get everything in order!
+- With the use of a cloud drive like Google Drive or Microsoft OneDrive, your Familiar.sh configuration can be shared and synced across multiple machines. Then just run `familiar attune` to get everything in order!
 - If you place copies of your configuration files (.bashrc, .vimrc, SSH config, AWS config, etc.) next to your Familiar.sh configuration in your cloud drive, you can tell Familiar.sh where they belong and have it keep them in sync for you as well.
 - You can even write scripts that perform custom machine setup and have Familiar.sh run them as needed.
 
@@ -25,14 +25,14 @@ _(Yet to be written.)_
   - `familiar help` (alias `--help`, `-h`): List help information. `help` can also be used to get information about individual subcommands (for example, you can get information about the `config` subcommand by running `familiar help config`).
   - `familiar version` (alias `--version`, `-v`): Print the installed version of Familiar.sh.
 - **Shared Configuration**
-  - `familiar sync`: Set up the current machine so it matches the shared configuration. To do this, Familiar.sh will perform the following operations as needed: installing packages, uninstalling packages, copying files, and running scripts.
+  - `familiar attune` (alias `sync`): Set up the current machine so it matches the shared configuration. To do this, Familiar.sh will perform the following operations as needed: installing packages, uninstalling packages, copying files, and running scripts.
   - `familiar config`: Print the contents of the shared configuration file.
   - `familiar config location`: Print the config file location.
   - `familiar config location <path>`: Set the config file location to the given path.
 - **Configuration Management**
   - `familiar file add <sourcePath> <destinationPath>`: Add the file at the given source path to the shared configuration, telling Familiar.sh it should be synced to the given destination path.
   - `familiar file remove <filename>`: Remove the given file from the shared configuration.
-  - `familiar script add <path>`: Add the script at the given path to the shared configuration. The script will be run whenever `familiar sync` is run, so it should be idempotent.
+  - `familiar script add <path>`: Add the script at the given path to the shared configuration. The script will be run whenever `familiar attune` is run, so it should be idempotent.
     - Optional flags:
       - `--operating-systems <operatingSystems>`: Specify which operating systems the script should run on (by default, it runs on all operating systems). The operating systems should be a comma separated list - valid values are `windows`, `macos`, and `linux`. For example, `--operating-systems "macos, linux"` would specify that the script should only be run on MacOS and Linux.
       - `--preconditions <preconditions>`: Specify that the script should only be run when the given preconditions are met. _Note: The way of specifying preconditions is still being designed. More details to come._
@@ -65,6 +65,8 @@ _(Yet to be written.)_
     - `familiar package update <packageManager> <package>` (alias `package upgrade`): Update the given package under the given package manager to the latest available version. This also updates the package version in the shared configuration.
       - Optional flags:
         - `--no-save`: Perform the operation without updating the shared configuration.
+  - **Importing**
+    - `familiar package import <packageManager>`: For the given package manager, import all currently installed packages into the shared configuration. This is helpful for getting started with Familiar.sh on a machine that already has a lot of packages installed.
 
 ### Examples
 

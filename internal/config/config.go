@@ -10,56 +10,82 @@ import (
 
 // Config represents the contents of the config file.
 type Config struct {
-	Version         int              `yaml:"version"`
-	Files           []File           `yaml:"files"`
-	Scripts         []Script         `yaml:"scripts"`
-	PackageManagers []PackageManager `yaml:"packageManagers"`
+	Version         int                        `yaml:"version"`
+	Files           []ConfiguredFile           `yaml:"files"`
+	Scripts         []ConfiguredScript         `yaml:"scripts"`
+	PackageManagers []ConfiguredPackageManager `yaml:"packageManagers"`
 }
 
-// File represents a file managed by Familiar.sh.
-type File struct {
-	SourcePath       string            `yaml:"sourcePath"`
-	DestinationPath  string            `yaml:"destinationPath,omitempty"`
-	OperatingSystems []OperatingSystem `yaml:"operatingSystems,omitempty"`
+// ConfiguredFile represents a file managed by Familiar.sh.
+type ConfiguredFile struct {
+	SourcePath       string                      `yaml:"sourcePath"`
+	DestinationPath  string                      `yaml:"destinationPath,omitempty"`
+	OperatingSystems []ConfiguredOperatingSystem `yaml:"operatingSystems,omitempty"`
 }
 
-// Script represents a script managed by Familiar.sh.
-type Script struct {
-	SourcePath       string            `yaml:"sourcePath"`
-	OperatingSystems []OperatingSystem `yaml:"operatingSystems,omitempty"`
+// ConfiguredScript represents a script managed by Familiar.sh.
+type ConfiguredScript struct {
+	SourcePath       string                      `yaml:"sourcePath"`
+	OperatingSystems []ConfiguredOperatingSystem `yaml:"operatingSystems,omitempty"`
 }
 
-// PackageManager represents a package manager installed by Familiar.sh.
-type PackageManager struct {
-	Name     string    `yaml:"name"`
-	Packages []Package `yaml:"packages"`
+// ConfiguredPackageManager represents a package manager installed by Familiar.sh.
+type ConfiguredPackageManager struct {
+	Name     string              `yaml:"name"`
+	Packages []ConfiguredPackage `yaml:"packages"`
 }
 
-// Package represents a package installed by a specific package manager.
-type Package struct {
+// ConfiguredPackage represents a package installed by a specific package manager.
+type ConfiguredPackage struct {
 	Name    string `yaml:"name"`
 	Version string `yaml:"version"`
 }
 
-// OperatingSystem represents an OS that a File or Script is used in.
-type OperatingSystem struct {
+// ConfiguredOperatingSystem represents an OS that a ConfiguredFile or ConfiguredScript is used in.
+type ConfiguredOperatingSystem struct {
 	Name            string `yaml:"name"`
 	DestinationPath string `yaml:"destinationPath,omitempty"`
 }
 
-// GetConfigContents returns the contents of the config file as a YAML string.
-func GetConfigContents() (string, error) {
-	config, err := readConfigFile()
-	if err != nil {
-		return "", err
-	}
-
+// YamlString returns the Config contents as a YAML string.
+func (config *Config) YamlString() (string, error) {
 	bytes, err := yaml.Marshal(config)
 	if err != nil {
 		return "", err
 	}
 
 	return strings.TrimSpace(string(bytes)), nil
+}
+
+// ReadConfigFile returns the contents of the config file as a pointer to Config struct.
+//
+// If the config file has not yet been created, it first creates and initializes it.
+func ReadConfigFile() (*Config, error) {
+	configLocation, err := GetConfigLocation()
+	if err != nil {
+		return nil, err
+	}
+
+	bytes, err := os.ReadFile(configLocation)
+	if err != nil {
+		if os.IsNotExist(err) {
+			newConfig := &Config{Version: 1, Files: []ConfiguredFile{}, Scripts: []ConfiguredScript{}, PackageManagers: []ConfiguredPackageManager{}}
+			err = writeConfigFile(newConfig)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			return nil, err
+		}
+	}
+
+	var config Config
+	err = yaml.Unmarshal(bytes, &config)
+	if err != nil {
+		return nil, err
+	}
+
+	return &config, nil
 }
 
 // AddPackageManager adds the given package manager to the config file. If the given package manager is already in the
@@ -79,9 +105,9 @@ func AddPackageManager(packageManagerName string) error {
 			}
 		}
 
-		packageManager := PackageManager{
+		packageManager := ConfiguredPackageManager{
 			Name:     packageManagerName,
-			Packages: []Package{},
+			Packages: []ConfiguredPackage{},
 		}
 		config.PackageManagers = append(config.PackageManagers, packageManager)
 		return nil
@@ -95,7 +121,7 @@ func AddPackageManager(packageManagerName string) error {
 //   - packageManagerName: The name of the package manager to remove.
 func RemovePackageManager(packageManagerName string) error {
 	return updateConfigFile(func(config *Config) error {
-		var filteredPackageManagers []PackageManager
+		var filteredPackageManagers []ConfiguredPackageManager
 		for i := range config.PackageManagers {
 			if config.PackageManagers[i].Name != packageManagerName {
 				filteredPackageManagers = append(filteredPackageManagers, config.PackageManagers[i])
@@ -121,9 +147,9 @@ func RemovePackageManager(packageManagerName string) error {
 //   - packageManagerName: The name of the package manager.
 //   - packageName: The name of the package to add.
 //   - packageVersion: The version of the package to add.
-func AddPackage(packageManagerName string, packageName string, packageVersion string) error {
+func AddPackage(packageManagerName string, packageName string, packageVersion *packagemanagers.Version) error {
 	return updateConfigFile(func(config *Config) error {
-		var matchingPackageManager *PackageManager
+		var matchingPackageManager *ConfiguredPackageManager
 		for i := range config.PackageManagers {
 			if config.PackageManagers[i].Name == packageManagerName {
 				matchingPackageManager = &config.PackageManagers[i]
@@ -141,7 +167,7 @@ func AddPackage(packageManagerName string, packageName string, packageVersion st
 			}
 		}
 
-		newPackage := Package{Name: packageName, Version: packageVersion}
+		newPackage := ConfiguredPackage{Name: packageName, Version: packageVersion.VersionString}
 		matchingPackageManager.Packages = append(matchingPackageManager.Packages, newPackage)
 		return nil
 	})
@@ -159,9 +185,9 @@ func AddPackage(packageManagerName string, packageName string, packageVersion st
 //   - packageManagerName: The name of the package manager.
 //   - packageName: The name of the package to add.
 //   - packageVersion: The version of the package to add.
-func UpdatePackage(packageManagerName string, packageName string, packageVersion string) error {
+func UpdatePackage(packageManagerName string, packageName string, packageVersion *packagemanagers.Version) error {
 	return updateConfigFile(func(config *Config) error {
-		var matchingPackageManager *PackageManager
+		var matchingPackageManager *ConfiguredPackageManager
 		for i := range config.PackageManagers {
 			if config.PackageManagers[i].Name == packageManagerName {
 				matchingPackageManager = &config.PackageManagers[i]
@@ -173,7 +199,7 @@ func UpdatePackage(packageManagerName string, packageName string, packageVersion
 			return fmt.Errorf("package manager not present")
 		}
 
-		var matchingPackage *Package
+		var matchingPackage *ConfiguredPackage
 		for i := range matchingPackageManager.Packages {
 			if matchingPackageManager.Packages[i].Name == packageName {
 				matchingPackage = &matchingPackageManager.Packages[i]
@@ -185,11 +211,11 @@ func UpdatePackage(packageManagerName string, packageName string, packageVersion
 			return fmt.Errorf("package not present")
 		}
 
-		if matchingPackage.Version == packageVersion {
+		if matchingPackage.Version == packageVersion.VersionString {
 			return fmt.Errorf("package already set to given version")
 		}
 
-		matchingPackage.Version = packageVersion
+		matchingPackage.Version = packageVersion.VersionString
 		return nil
 	})
 }
@@ -205,7 +231,7 @@ func UpdatePackage(packageManagerName string, packageName string, packageVersion
 //   - packageName: The name of the package to add.
 func RemovePackage(packageManagerName string, packageName string) error {
 	return updateConfigFile(func(config *Config) error {
-		var matchingPackageManager *PackageManager
+		var matchingPackageManager *ConfiguredPackageManager
 		for i := range config.PackageManagers {
 			if config.PackageManagers[i].Name == packageManagerName {
 				matchingPackageManager = &config.PackageManagers[i]
@@ -217,7 +243,7 @@ func RemovePackage(packageManagerName string, packageName string) error {
 			return fmt.Errorf("package manager not present")
 		}
 
-		var filteredPackages []Package
+		var filteredPackages []ConfiguredPackage
 		for i := range matchingPackageManager.Packages {
 			if matchingPackageManager.Packages[i].Name != packageName {
 				filteredPackages = append(filteredPackages, matchingPackageManager.Packages[i])
@@ -231,37 +257,6 @@ func RemovePackage(packageManagerName string, packageName string) error {
 		matchingPackageManager.Packages = filteredPackages
 		return nil
 	})
-}
-
-// readConfigFile returns the contents of the config file as a pointer to Config struct.
-//
-// If the config file has not yet been created, it first creates and initializes it.
-func readConfigFile() (*Config, error) {
-	configLocation, err := GetConfigLocation()
-	if err != nil {
-		return nil, err
-	}
-
-	bytes, err := os.ReadFile(configLocation)
-	if err != nil {
-		if os.IsNotExist(err) {
-			newConfig := &Config{Version: 1, Files: []File{}, Scripts: []Script{}, PackageManagers: []PackageManager{}}
-			err = writeConfigFile(newConfig)
-			if err != nil {
-				return nil, err
-			}
-		} else {
-			return nil, err
-		}
-	}
-
-	var config Config
-	err = yaml.Unmarshal(bytes, &config)
-	if err != nil {
-		return nil, err
-	}
-
-	return &config, nil
 }
 
 // writeConfigFile writes the given configuration to the config file as YAML.
@@ -292,7 +287,7 @@ func writeConfigFile(config *Config) error {
 // It takes the following parameters:
 //   - updater: A function that takes in a pointer to an instance of Config and modifies it in some way.
 func updateConfigFile(updater func(*Config) error) error {
-	config, err := readConfigFile()
+	config, err := ReadConfigFile()
 	if err != nil {
 		return err
 	}

@@ -16,7 +16,7 @@ func (configCommand *ConfigCommand) Name() string {
 
 // Description returns a short description of the command.
 func (configCommand *ConfigCommand) Description() string {
-	return "Print the contents of the shared configuration file or set the config file location"
+	return "Print the contents of the shared configuration file or set the config file location."
 }
 
 // Documentation returns detailed documentation for the command.
@@ -36,13 +36,17 @@ Run "familiar help config location" for more information about the "location" su
 // If there is an error executing the command, Execute will return an error that can be displayed to the user.
 func (configCommand *ConfigCommand) Execute(args []string) error {
 	if len(args) == 0 {
-		// Print the contents of the configuration file.
-		configContents, err := config.GetConfigContents()
+		configContents, err := config.ReadConfigFile()
 		if err != nil {
 			return err
 		}
 
-		fmt.Println(configContents)
+		configYaml, err := configContents.YamlString()
+		if err != nil {
+			return err
+		}
+
+		fmt.Println(configYaml)
 		return nil
 	}
 
