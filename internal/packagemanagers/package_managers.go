@@ -8,6 +8,15 @@ var packageManagers = map[string]PackageManager{
 	scoopPackageManager.Name(): scoopPackageManager,
 }
 
+// GetAllPackageManagers returns a slice containing all package managers.
+func GetAllPackageManagers() []PackageManager {
+	var packageManagersSlice []PackageManager
+	for _, packageManager := range packageManagers {
+		packageManagersSlice = append(packageManagersSlice, packageManager)
+	}
+	return packageManagersSlice
+}
+
 // GetPackageManager returns the package manager with the given name, if it exists.
 //
 // It takes the following parameters:

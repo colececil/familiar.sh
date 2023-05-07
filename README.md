@@ -66,6 +66,7 @@ _(Yet to be written.)_
       - Optional flags:
         - `--no-save`: Perform the operation without updating the shared configuration.
   - **Importing**
+    - `familiar package import`: For all package managers that are supported and installed, import all currently installed packages into the shared configuration. This is helpful for getting started with Familiar.sh on a machine that already has a lot of packages installed.
     - `familiar package import <packageManager>`: For the given package manager, import all currently installed packages into the shared configuration. This is helpful for getting started with Familiar.sh on a machine that already has a lot of packages installed.
 
 ### Examples

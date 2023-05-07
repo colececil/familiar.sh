@@ -17,7 +17,7 @@ func (scoopPackageManager *ScoopPackageManager) Name() string {
 
 // IsInstalled returns true if the package manager is installed.
 func (scoopPackageManager *ScoopPackageManager) IsInstalled() (bool, error) {
-	fmt.Printf("Checking if package manager \"%s\" is already installed...\n", scoopPackageManager.Name())
+	fmt.Printf("Checking if package manager \"%s\" is installed...\n", scoopPackageManager.Name())
 
 	_, err := shell.RunShellCommand(scoopPackageManager.Name(), false, nil, "--version")
 	if err != nil {
