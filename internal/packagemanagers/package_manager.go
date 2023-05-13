@@ -4,11 +4,17 @@ type PackageManager interface {
 	// Name returns the name of the package manager.
 	Name() string
 
+	// IsSupported returns whether the package manager is supported on the current machine.
+	IsSupported() bool
+
 	// IsInstalled returns whether the package manager is installed.
 	IsInstalled() (bool, error)
 
 	// Install installs the package manager.
 	Install() error
+
+	// Update updates the package manager.
+	Update() error
 
 	// Uninstall uninstalls the package manager.
 	Uninstall() error

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/colececil/familiar.sh/internal/shell"
 	"regexp"
+	"strings"
 )
 
 type ScoopPackageManager struct {
@@ -13,6 +14,11 @@ type ScoopPackageManager struct {
 // Name returns the name of the package manager.
 func (scoopPackageManager *ScoopPackageManager) Name() string {
 	return "scoop"
+}
+
+// IsSupported returns whether the package manager is supported on the current machine.
+func (scoopPackageManager *ScoopPackageManager) IsSupported() bool {
+	return shell.IsWindows()
 }
 
 // IsInstalled returns true if the package manager is installed.
@@ -39,6 +45,18 @@ func (scoopPackageManager *ScoopPackageManager) Install() error {
 	return nil
 }
 
+// Update updates the package manager.
+func (scoopPackageManager *ScoopPackageManager) Update() error {
+	fmt.Printf("Updating package manager \"%s\"...\n", scoopPackageManager.Name())
+
+	_, err := shell.RunShellCommand(scoopPackageManager.Name(), true, nil, "update")
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // Uninstall uninstalls the package manager.
 func (scoopPackageManager *ScoopPackageManager) Uninstall() error {
 	fmt.Printf("Uninstalling package manager \"%s\"...\n", scoopPackageManager.Name())
@@ -58,12 +76,12 @@ func (scoopPackageManager *ScoopPackageManager) Uninstall() error {
 func (scoopPackageManager *ScoopPackageManager) InstalledPackages() ([]*Package, error) {
 	fmt.Printf("Getting installed package information from package manager \"%s\"...\n", scoopPackageManager.Name())
 
-	outputJsonRegex, err := regexp.Compile("(?s)(.*)")
+	jsonCaptureRegex, err := regexp.Compile("(?s)(.*)")
 	if err != nil {
 		return nil, err
 	}
 
-	outputJson, err := shell.RunShellCommand(scoopPackageManager.Name(), false, outputJsonRegex, "export")
+	capturedJson, err := shell.RunShellCommand(scoopPackageManager.Name(), false, jsonCaptureRegex, "export")
 	if err != nil {
 		return nil, err
 	}
@@ -76,20 +94,49 @@ func (scoopPackageManager *ScoopPackageManager) InstalledPackages() ([]*Package,
 	}
 	var scoopExport ScoopExport
 
-	err = json.Unmarshal([]byte(outputJson), &scoopExport)
+	err = json.Unmarshal([]byte(capturedJson), &scoopExport)
 	if err != nil {
 		return nil, err
 	}
 
-	var installedPackages []*Package
+	var installedPackages = make(map[string]*Package)
 	for _, app := range scoopExport.Apps {
-		installedPackages = append(installedPackages, &Package{
-			Name:    app.Name,
-			Version: &Version{VersionString: app.Version},
-		})
+		installedPackages[app.Name] = &Package{
+			Name:             app.Name,
+			InstalledVersion: &Version{VersionString: app.Version},
+			LatestVersion:    &Version{VersionString: app.Version},
+		}
 	}
 
-	return installedPackages, nil
+	packagesCaptureRegex, err := regexp.Compile("(?s)^.*----\\n(([^\\n]*(\\n)??)*)\\n*$")
+	if err != nil {
+		return nil, err
+	}
+
+	capturedPackages, err := shell.RunShellCommand(scoopPackageManager.Name(), false, packagesCaptureRegex, "status")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, packageLine := range strings.Split(capturedPackages, "\n") {
+		packageFields := strings.Fields(packageLine)
+
+		if len(packageFields) != 3 {
+			return nil, fmt.Errorf("unexpected number of fields in line: %s", packageLine)
+		}
+
+		installedPackage, isPresent := installedPackages[packageFields[0]]
+		if isPresent {
+			installedPackage.LatestVersion = &Version{VersionString: packageFields[2]}
+		}
+	}
+
+	var installedPackagesSlice []*Package
+	for _, installedPackage := range installedPackages {
+		installedPackagesSlice = append(installedPackagesSlice, installedPackage)
+	}
+
+	return installedPackagesSlice, nil
 }
 
 // InstallPackage installs the package of the given name. If a version is given, that specific version of the package is

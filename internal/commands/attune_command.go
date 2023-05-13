@@ -48,6 +48,10 @@ func (attuneCommand *AttuneCommand) Execute(args []string) error {
 			return err
 		}
 
+		if isSupported := packageManager.IsSupported(); !isSupported {
+			continue
+		}
+
 		installed, err := packageManager.IsInstalled()
 		if err != nil {
 			return err
@@ -59,6 +63,9 @@ func (attuneCommand *AttuneCommand) Execute(args []string) error {
 			}
 		} else {
 			fmt.Printf("Package manager \"%s\" is already installed.\n", packageManager.Name())
+			if err := packageManager.Update(); err != nil {
+				return err
+			}
 		}
 
 		installedPackages, err := packageManager.InstalledPackages()
@@ -69,7 +76,7 @@ func (attuneCommand *AttuneCommand) Execute(args []string) error {
 		if len(installedPackages) > 0 {
 			fmt.Printf("Packages currently installed with %s:\n", packageManager.Name())
 			for _, installedPackage := range installedPackages {
-				fmt.Printf("- %s, version %s\n", installedPackage.Name, installedPackage.Version)
+				fmt.Printf("- %s, version %s\n", installedPackage.Name, installedPackage.InstalledVersion)
 			}
 		} else {
 			fmt.Printf("No packages are currently installed with %s.\n", packageManager.Name())
@@ -90,7 +97,7 @@ func (attuneCommand *AttuneCommand) Execute(args []string) error {
 
 		var installedPackageVersions = make(map[string]*packagemanagers.Version)
 		for _, installedPackage := range installedPackages {
-			installedPackageVersions[installedPackage.Name] = installedPackage.Version
+			installedPackageVersions[installedPackage.Name] = installedPackage.InstalledVersion
 		}
 
 		// Update packages that are installed but have a lower version than the one in the config file.

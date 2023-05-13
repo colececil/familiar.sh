@@ -38,10 +38,6 @@ _(Yet to be written.)_
       - `--preconditions <preconditions>`: Specify that the script should only be run when the given preconditions are met. _Note: The way of specifying preconditions is still being designed. More details to come._
   - `familiar script remove <filename>`: Remove the given script from the shared configuration.
 - **Package Management**
-  - **Status of Installation and Updates**
-    - `familiar package status`: List all supported package managers and installed packages, along with any available updates.
-    - `familiar package status <packageManager>`: List all installed packages under the given package manager, along with any available updates.
-    - `familiar package status <packageManager> <package>`: Check for available updates to the given package under the given package manager.
   - **Package Search and Information**
     - `familiar package search <term>`: Search for packages with the given term under all installed package managers.
     - `familiar package search <packageManager> <term>`: Search for packages using the given term under the given package manager.
@@ -65,6 +61,10 @@ _(Yet to be written.)_
     - `familiar package update <packageManager> <package>` (alias `package upgrade`): Update the given package under the given package manager to the latest available version. This also updates the package version in the shared configuration.
       - Optional flags:
         - `--no-save`: Perform the operation without updating the shared configuration.
+  - **Status of Installation and Updates**
+    - `familiar package status`: Show the status of all configured/installed packages for all installed package managers, along with any available updates.
+    - `familiar package status <packageManager>`: Show the status of all configured/installed packages under the given package manager, along with any available updates.
+    - `familiar package status <packageManager> <package>`: Show the status for the given package under the given package manager.
   - **Importing**
     - `familiar package import`: For all package managers that are supported and installed, import all currently installed packages into the shared configuration. This is helpful for getting started with Familiar.sh on a machine that already has a lot of packages installed.
     - `familiar package import <packageManager>`: For the given package manager, import all currently installed packages into the shared configuration. This is helpful for getting started with Familiar.sh on a machine that already has a lot of packages installed.
