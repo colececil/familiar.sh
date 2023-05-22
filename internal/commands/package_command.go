@@ -67,6 +67,18 @@ func (packageCommand *PackageCommand) Execute(args []string) error {
 		default:
 			return fmt.Errorf("wrong number of arguments")
 		}
+	case "update":
+		subcommandArgs := args[1:]
+		switch len(subcommandArgs) {
+		case 0:
+			return updatePackages()
+		case 1:
+			return updatePackagesForPackageManager(subcommandArgs[0])
+		case 2:
+			return updatePackage(subcommandArgs[0], subcommandArgs[1])
+		default:
+			return fmt.Errorf("wrong number of arguments")
+		}
 	case "status":
 		subcommandArgs := args[1:]
 		switch len(subcommandArgs) {
@@ -161,6 +173,144 @@ func removePackage(packageManagerName string, packageName string) error {
 	}
 
 	return config.RemovePackage(packageManagerName, packageName)
+}
+
+// updatePackages updates all currently installed packages for all package managers that are both supported and
+// installed.
+func updatePackages() error {
+	packageManagers := packagemanagers.GetAllPackageManagers()
+
+	for _, packageManager := range packageManagers {
+		if isSupported := packageManager.IsSupported(); !isSupported {
+			continue
+		}
+
+		isInstalled, err := packageManager.IsInstalled()
+		if err != nil {
+			return err
+		}
+
+		if isInstalled {
+			if err := updatePackagesForPackageManager(packageManager.Name()); err != nil {
+				return err
+			}
+		} else {
+			fmt.Printf("Skipping package manager \"%s\" because it is not installed.\n", packageManager.Name())
+		}
+	}
+
+	return nil
+}
+
+// updatePackagesForPackageManager updates all currently installed packages for the package manager of the given name.
+func updatePackagesForPackageManager(packageManagerName string) error {
+	packageManager, err := packagemanagers.GetPackageManager(packageManagerName)
+	if err != nil {
+		return err
+	}
+
+	configContents, err := config.ReadConfigFile()
+	if err != nil {
+		return err
+	}
+
+	configuredPackages := make(map[string]*packagemanagers.Version)
+	for _, configuredPackageManager := range configContents.PackageManagers {
+		if configuredPackageManager.Name == packageManagerName {
+			for _, configuredPackage := range configuredPackageManager.Packages {
+				configuredPackages[configuredPackage.Name] =
+					&packagemanagers.Version{VersionString: configuredPackage.Version}
+			}
+			break
+		}
+	}
+
+	if err := packageManager.Update(); err != nil {
+		return err
+	}
+
+	installedPackages, err := packageManager.InstalledPackages()
+	if err != nil {
+		return err
+	}
+
+	for _, installedPackage := range installedPackages {
+		if installedPackage.LatestVersion.IsGreaterThan(installedPackage.InstalledVersion) {
+			newVersion, err := packageManager.UpdatePackage(installedPackage.Name, nil)
+			if err != nil {
+				return err
+			}
+
+			if configuredPackages[installedPackage.Name] != nil &&
+				configuredPackages[installedPackage.Name].IsLessThan(newVersion) {
+				if err := config.UpdatePackage(packageManagerName, installedPackage.Name, newVersion); err != nil {
+					return err
+				}
+			}
+		} else {
+			fmt.Printf("Skipping package \"%s\" because it is already up to date.\n", installedPackage.Name)
+		}
+	}
+
+	return nil
+}
+
+// updatePackage updates the given package for the given package manager.
+func updatePackage(packageManagerName string, packageName string) error {
+	packageManager, err := packagemanagers.GetPackageManager(packageManagerName)
+	if err != nil {
+		return err
+	}
+
+	if err := packageManager.Update(); err != nil {
+		return err
+	}
+
+	installedPackages, err := packageManager.InstalledPackages()
+	if err != nil {
+		return err
+	}
+
+	for _, installedPackage := range installedPackages {
+		if installedPackage.Name == packageName {
+			if installedPackage.LatestVersion.IsGreaterThan(installedPackage.InstalledVersion) {
+				newVersion, err := packageManager.UpdatePackage(packageName, nil)
+				if err != nil {
+					return err
+				}
+
+				configContents, err := config.ReadConfigFile()
+				if err != nil {
+					return err
+				}
+
+				for _, configuredPackageManager := range configContents.PackageManagers {
+					if configuredPackageManager.Name == packageManagerName {
+						for _, configuredPackage := range configuredPackageManager.Packages {
+							if configuredPackage.Name == packageName {
+								configuredVersion := &packagemanagers.Version{VersionString: configuredPackage.Version}
+								if configuredVersion.IsLessThan(newVersion) {
+									err := config.UpdatePackage(packageManagerName, packageName, newVersion)
+									if err != nil {
+										return err
+									}
+								}
+								break
+							}
+						}
+						break
+					}
+				}
+			} else {
+				fmt.Printf("Package \"%s\" is already up to date.\n", packageName)
+			}
+
+			return nil
+		}
+	}
+
+	fmt.Printf("Package \"%s\" is not installed.\n", packageName)
+	return nil
 }
 
 // getStatus prints the status for all package managers supported on the current machine.

@@ -183,8 +183,8 @@ func AddPackage(packageManagerName string, packageName string, packageVersion *p
 //
 // It takes the following parameters:
 //   - packageManagerName: The name of the package manager.
-//   - packageName: The name of the package to add.
-//   - packageVersion: The version of the package to add.
+//   - packageName: The name of the package to update.
+//   - packageVersion: The version of the package to update.
 func UpdatePackage(packageManagerName string, packageName string, packageVersion *packagemanagers.Version) error {
 	return updateConfigFile(func(config *Config) error {
 		var matchingPackageManager *ConfiguredPackageManager

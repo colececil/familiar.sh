@@ -169,11 +169,6 @@ func (scoopPackageManager *ScoopPackageManager) InstallPackage(packageName strin
 //
 // It returns the version of the package that was installed.
 func (scoopPackageManager *ScoopPackageManager) UpdatePackage(packageName string, version *Version) (*Version, error) {
-	fmt.Printf("Updating package manager \"%s\"...\n", scoopPackageManager.Name())
-	if _, err := shell.RunShellCommand(scoopPackageManager.Name(), false, nil, "update"); err != nil {
-		return nil, err
-	}
-
 	fmt.Printf("Updating package \"%s\"...\n", packageName)
 
 	regexString := fmt.Sprintf("'%s' \\((.*)\\) was installed", packageName)
