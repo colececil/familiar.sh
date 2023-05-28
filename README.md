@@ -1,3 +1,5 @@
+![Familiar.sh logo](logo/familiar-logo.png)
+
 # Familiar.sh
 
 A cross-platform CLI for setting up all your machines just the way you like and keeping them in sync. Supports Windows, MacOS, and Linux.
