@@ -1,7 +1,9 @@
 package packagemanagers
 
 import (
+	"strconv"
 	"strings"
+	"unicode"
 )
 
 // Version represents a version of a package or package manager.
@@ -32,24 +34,51 @@ func (version *Version) IsGreaterThan(otherVersion *Version) bool {
 // compareVersionStrings compares two version strings. It returns -1 if versionString1 is less than versionString2, 0 if
 // versionString1 is equal to versionString2, and 1 if versionString1 is greater than versionString2.
 func compareVersionStrings(versionString1 string, versionString2 string) int {
-	versionString1Parts := strings.Split(versionString1, ".")
-	versionString2Parts := strings.Split(versionString2, ".")
+	version1Parts := strings.FieldsFunc(versionString1, isRuneNonAlphanumeric)
+	version2Parts := strings.FieldsFunc(versionString2, isRuneNonAlphanumeric)
 
-	for i := 0; i < len(versionString1Parts) && i < len(versionString2Parts); i++ {
-		if versionString1Parts[i] < versionString2Parts[i] {
-			return -1
-		} else if versionString1Parts[i] > versionString2Parts[i] {
-			return 1
+	for i := 0; i < len(version1Parts) || i < len(version2Parts); i++ {
+		version1Part := "0"
+		if i < len(version1Parts) {
+			version1Part = version1Parts[i]
+		}
+
+		version2Part := "0"
+		if i < len(version2Parts) {
+			version2Part = version2Parts[i]
+		}
+
+		bothAreNumbers := true
+
+		version1Number, err := strconv.Atoi(version1Part)
+		if err != nil {
+			bothAreNumbers = false
+		}
+
+		version2Number, err := strconv.Atoi(version2Part)
+		if err != nil {
+			bothAreNumbers = false
+		}
+
+		if bothAreNumbers {
+			if version1Number < version2Number {
+				return -1
+			} else if version1Number > version2Number {
+				return 1
+			}
+		} else {
+			if version1Part < version2Part {
+				return -1
+			} else if version1Part > version2Part {
+				return 1
+			}
 		}
 	}
 
-	if len(versionString1Parts) == len(versionString2Parts) {
-		return 0
-	}
+	return 0
+}
 
-	if len(versionString1Parts) < len(versionString2Parts) {
-		return -1
-	} else {
-		return 1
-	}
+// isRuneNonAlphanumeric returns whether the rune is an alphanumeric character.
+func isRuneNonAlphanumeric(character rune) bool {
+	return !unicode.IsNumber(character) && !unicode.IsLetter(character)
 }
