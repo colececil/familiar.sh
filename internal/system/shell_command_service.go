@@ -10,11 +10,23 @@ import (
 
 // ShellCommandService provides functionality for running shell commands.
 type ShellCommandService struct {
+	runShellCommandFunc RunShellCommandFunc
 }
 
 // NewShellCommandService returns a new instance of ShellCommandService.
-func NewShellCommandService() *ShellCommandService {
-	return &ShellCommandService{}
+func NewShellCommandService(runShellCommandFunc RunShellCommandFunc) *ShellCommandService {
+	return &ShellCommandService{
+		runShellCommandFunc: runShellCommandFunc,
+	}
+}
+
+// RunShellCommandFunc is a function for running a shell command.
+type RunShellCommandFunc func(program string, printOutput bool, resultCaptureRegex *regexp.Regexp,
+	args ...string) (string, error)
+
+// NewRunShellCommandFunc returns a new instance of RunShellCommandFunc.
+func NewRunShellCommandFunc() RunShellCommandFunc {
+	return defaultRunShellCommandFunc
 }
 
 // RunShellCommand runs a shell command for the given program and the given arguments. The command's output is printed
@@ -30,6 +42,12 @@ func NewShellCommandService() *ShellCommandService {
 // It returns the result captured by the regular expression, and an error if one occurred. If no result was captured,
 // the result is an empty string.
 func (shellCommandService *ShellCommandService) RunShellCommand(program string, printOutput bool,
+	resultCaptureRegex *regexp.Regexp, args ...string) (string, error) {
+	return shellCommandService.runShellCommandFunc(program, printOutput, resultCaptureRegex, args...)
+}
+
+// defaultRunShellCommandFunc is the default implementation of RunShellCommandFunc.
+func defaultRunShellCommandFunc(program string, printOutput bool,
 	resultCaptureRegex *regexp.Regexp, args ...string) (string, error) {
 	command := exec.Command(program, args...)
 

@@ -24,7 +24,9 @@ var providers = wire.NewSet(
 	config.NewConfigService,
 	packagemanagers.NewPackageManagerRegistry,
 	packagemanagers.NewScoopPackageManager,
+	system.NewIsWindowsFunc,
 	system.NewOperatingSystemService,
+	system.NewRunShellCommandFunc,
 	system.NewShellCommandService,
 )
 

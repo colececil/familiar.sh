@@ -84,6 +84,7 @@ In order to develop Familiar.sh on your local machine, you'll first need to foll
 1. Make sure the following are installed:
     - [Go v1.20](https://go.dev/doc/install): Go was chosen as the programming language for this project because of its ability to easily create executables for different operating systems, and because the executables it creates require no additional dependencies.
     - [Wire CLI v0.5.0](https://github.com/google/wire): This project uses Wire, which is a compile-time dependency injection framework. The Wire CLI package (located at <https://github.com/google/wire/tree/main/cmd/wire>) is needed in order to generate the injection code before running or building the project.
+    - [Ginkgo CLI v2.11.0](https://github.com/onsi/ginkgo): This project uses Ginkgo, which is a unit test framework. The Ginkgo CLI is needed in order to run the unit tests.
 2. Download the project dependencies by running `go mod download` from the project root.
 3. Generate the dependency injection code by running `wire gen ./...` from the project root. (This generated code will be saved at `cmd/familiar/wire_gen.go`.)
 

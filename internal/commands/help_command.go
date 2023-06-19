@@ -49,8 +49,7 @@ func (helpCommand *HelpCommand) Execute(args []string) error {
 		// No command name was provided - display a list of all available commands.
 		fmt.Println(`Usage: familiar <command> [<args>]
 
-Available commands are listed below. Run "familiar help <command>" to get detailed documentation for a specific command.
-`)
+Available commands are listed below. Run "familiar help <command>" to get detailed documentation for a specific command.`)
 		fmt.Printf("  %-15s %s\n", helpCommand.Name(), helpCommand.Description())
 		for _, command := range helpCommand.Commands {
 			fmt.Printf("  %-15s %s\n", command.Name(), command.Description())
