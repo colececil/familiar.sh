@@ -7,6 +7,17 @@ import (
 )
 
 type AttuneCommand struct {
+	configService          *config.ConfigService
+	packageManagerRegistry packagemanagers.PackageManagerRegistry
+}
+
+// NewAttuneCommand creates a new instance of AttuneCommand.
+func NewAttuneCommand(configService *config.ConfigService,
+	packageManagerRegistry packagemanagers.PackageManagerRegistry) *AttuneCommand {
+	return &AttuneCommand{
+		configService:          configService,
+		packageManagerRegistry: packageManagerRegistry,
+	}
 }
 
 // Name returns the name of the command, as it appears on the command line while being used.
@@ -37,13 +48,13 @@ func (attuneCommand *AttuneCommand) Execute(args []string) error {
 		return fmt.Errorf("the \"attune\" command does not take any arguments")
 	}
 
-	configContents, err := config.ReadConfigFile()
+	configContents, err := attuneCommand.configService.GetConfig()
 	if err != nil {
 		return err
 	}
 
 	for _, packageManagerInConfig := range configContents.PackageManagers {
-		packageManager, err := packagemanagers.GetPackageManager(packageManagerInConfig.Name)
+		packageManager, err := attuneCommand.packageManagerRegistry.GetPackageManager(packageManagerInConfig.Name)
 		if err != nil {
 			return err
 		}
@@ -91,8 +102,7 @@ func (attuneCommand *AttuneCommand) Execute(args []string) error {
 
 		var desiredPackageVersions = make(map[string]*packagemanagers.Version)
 		for _, packageInConfig := range packageManagerInConfig.Packages {
-			desiredPackageVersions[packageInConfig.Name] =
-				&packagemanagers.Version{VersionString: packageInConfig.Version}
+			desiredPackageVersions[packageInConfig.Name] = packagemanagers.NewVersion(packageInConfig.Version)
 		}
 
 		var installedPackageVersions = make(map[string]*packagemanagers.Version)
@@ -110,8 +120,12 @@ func (attuneCommand *AttuneCommand) Execute(args []string) error {
 					}
 
 					if newVersion.IsGreaterThan(desiredPackageVersion) {
-						err = config.UpdatePackage(packageManager.Name(), packageName, newVersion)
+						err = configContents.UpdatePackage(packageManager.Name(), packageName, newVersion)
 						if err != nil {
+							return err
+						}
+
+						if err = attuneCommand.configService.SetConfig(configContents); err != nil {
 							return err
 						}
 					}
@@ -128,8 +142,12 @@ func (attuneCommand *AttuneCommand) Execute(args []string) error {
 				}
 
 				if newVersion.IsGreaterThan(desiredPackageVersion) {
-					err = config.UpdatePackage(packageManager.Name(), packageName, newVersion)
+					err = configContents.UpdatePackage(packageManager.Name(), packageName, newVersion)
 					if err != nil {
+						return err
+					}
+
+					if err = attuneCommand.configService.SetConfig(configContents); err != nil {
 						return err
 					}
 				}

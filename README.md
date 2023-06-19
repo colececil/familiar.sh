@@ -74,3 +74,41 @@ _(Yet to be written.)_
 ### Examples
 
 _(Yet to be written.)_
+
+## Development
+
+### Prerequisites
+
+In order to develop Familiar.sh on your local machine, you'll first need to follow these steps:
+
+1. Make sure the following are installed:
+    - [Go v1.20](https://go.dev/doc/install): Go was chosen as the programming language for this project because of its ability to easily create executables for different operating systems, and because the executables it creates require no additional dependencies.
+    - [Wire CLI v0.5.0](https://github.com/google/wire): This project uses Wire, which is a compile-time dependency injection framework. The Wire CLI package (located at <https://github.com/google/wire/tree/main/cmd/wire>) is needed in order to generate the injection code before running or building the project.
+2. Download the project dependencies by running `go mod download` from the project root.
+3. Generate the dependency injection code by running `wire gen ./...` from the project root. (This generated code will be saved at `cmd/familiar/wire_gen.go`.)
+
+### Running the Project
+
+To run the project, run the following from the project root, replacing `<command>` with the command you want to run:
+
+```
+go run ./cmd/familiar/ <command>
+```
+
+### Building the Project
+
+To build the project, run the following from the project root:
+
+```
+go build ./cmd/familiar/
+```
+
+### Passing in the Project Version
+
+The project version can be passed in when building or running the project using `-ldflags '-X main.projectVersion=<version>'`, replacing `<version>` with the desired version. For example:
+
+```
+go build -ldflags '-X main.projectVersion=1.0.0' ./cmd/familiar/
+```
+
+This causes the `projectVersion` constant in `cmd/familiar/wire_gen.go` to be set to the given version in the executable, rather than using the default value of `"0.0.0"`.

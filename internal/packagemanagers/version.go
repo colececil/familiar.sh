@@ -11,6 +11,11 @@ type Version struct {
 	VersionString string
 }
 
+// NewVersion creates a new instance of Version.
+func NewVersion(versionString string) *Version {
+	return &Version{VersionString: versionString}
+}
+
 // String returns the string representation of the version.
 func (version *Version) String() string {
 	return version.VersionString

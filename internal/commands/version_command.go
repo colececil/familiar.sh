@@ -5,7 +5,17 @@ import "fmt"
 // VersionCommand represents the "version" command.
 type VersionCommand struct {
 	// Version is the current version of Familiar.
-	Version string
+	Version FamiliarVersionString
+}
+
+// FamiliarVersionString represents a version of Familiar.sh.
+type FamiliarVersionString string
+
+// NewVersionCommand returns a new instance of VersionCommand.
+func NewVersionCommand(version FamiliarVersionString) *VersionCommand {
+	return &VersionCommand{
+		Version: version,
+	}
 }
 
 // Name returns the name of the command, as it appears on the command line while being used.

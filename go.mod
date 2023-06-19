@@ -4,6 +4,7 @@ go 1.20
 
 require (
 	github.com/adrg/xdg v0.4.0
+	github.com/google/wire v0.5.0
 	github.com/stretchr/testify v1.8.4
 	gopkg.in/yaml.v3 v3.0.1
 )

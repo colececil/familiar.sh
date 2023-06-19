@@ -10,6 +10,19 @@ type HelpCommand struct {
 	Commands []Command
 }
 
+// NewHelpCommand creates a new instance of HelpCommand.
+func NewHelpCommand(versionCommand *VersionCommand, attuneCommand *AttuneCommand, configCommand *ConfigCommand,
+	packageCommand *PackageCommand) *HelpCommand {
+	return &HelpCommand{
+		Commands: []Command{
+			versionCommand,
+			attuneCommand,
+			configCommand,
+			packageCommand,
+		},
+	}
+}
+
 // Name returns the name of the command, as it appears on the command line while being used.
 func (helpCommand *HelpCommand) Name() string {
 	return "help"

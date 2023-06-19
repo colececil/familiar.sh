@@ -6,3 +6,12 @@ type Package struct {
 	InstalledVersion *Version
 	LatestVersion    *Version
 }
+
+// NewPackage creates a new instance of Package.
+func NewPackage(name string, installedVersion *Version, latestVersion *Version) *Package {
+	return &Package{
+		Name:             name,
+		InstalledVersion: installedVersion,
+		LatestVersion:    latestVersion,
+	}
+}

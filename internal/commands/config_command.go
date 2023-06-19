@@ -7,6 +7,14 @@ import (
 
 // ConfigCommand represents the "config" command.
 type ConfigCommand struct {
+	configService *config.ConfigService
+}
+
+// NewConfigCommand creates a new instance of ConfigCommand.
+func NewConfigCommand(configService *config.ConfigService) *ConfigCommand {
+	return &ConfigCommand{
+		configService: configService,
+	}
 }
 
 // Name returns the name of the command, as it appears on the command line while being used.
@@ -36,7 +44,7 @@ Run "familiar help config location" for more information about the "location" su
 // If there is an error executing the command, Execute will return an error that can be displayed to the user.
 func (configCommand *ConfigCommand) Execute(args []string) error {
 	if len(args) == 0 {
-		configContents, err := config.ReadConfigFile()
+		configContents, err := configCommand.configService.GetConfig()
 		if err != nil {
 			return err
 		}
@@ -53,13 +61,13 @@ func (configCommand *ConfigCommand) Execute(args []string) error {
 	switch args[0] {
 	case "location":
 		if len(args) == 1 {
-			location, err := config.GetConfigLocation()
+			location, err := configCommand.configService.GetConfigLocation()
 			if len(location) > 0 {
 				fmt.Println(location)
 			}
 			return err
 		} else {
-			return config.SetConfigLocation(args[1])
+			return configCommand.configService.SetConfigLocation(args[1])
 		}
 	default:
 		return fmt.Errorf("unknown subcommand %q", args[0])

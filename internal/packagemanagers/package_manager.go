@@ -1,5 +1,6 @@
 package packagemanagers
 
+// PackageManager represents a package manager that is supported by Familiar.sh.
 type PackageManager interface {
 	// Name returns the name of the package manager.
 	Name() string
