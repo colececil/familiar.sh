@@ -130,16 +130,18 @@ func (scoopPackageManager *ScoopPackageManager) InstalledPackages() ([]*Package,
 		return nil, err
 	}
 
-	for _, packageLine := range strings.Split(capturedPackages, "\n") {
-		packageFields := strings.Fields(packageLine)
+	if capturedPackages != "" {
+		for _, packageLine := range strings.Split(capturedPackages, "\n") {
+			packageFields := strings.Fields(packageLine)
 
-		if len(packageFields) != 3 {
-			return nil, fmt.Errorf("unexpected number of fields in line: %s", packageLine)
-		}
+			if len(packageFields) != 3 {
+				return nil, fmt.Errorf("unexpected number of fields in line: %s", packageLine)
+			}
 
-		installedPackage, isPresent := installedPackages[packageFields[0]]
-		if isPresent {
-			installedPackage.LatestVersion = NewVersion(packageFields[2])
+			installedPackage, isPresent := installedPackages[packageFields[0]]
+			if isPresent {
+				installedPackage.LatestVersion = NewVersion(packageFields[2])
+			}
 		}
 	}
 
