@@ -101,13 +101,13 @@ func (scoopPackageManager *ScoopPackageManager) InstalledPackages() ([]*Package,
 		return nil, err
 	}
 
-	type ScoopExport struct {
+	type scoopExportData struct {
 		Apps []struct {
 			Name    string `json:"name"`
 			Version string `json:"version"`
 		} `json:"apps"`
 	}
-	var scoopExport ScoopExport
+	var scoopExport scoopExportData
 
 	err = json.Unmarshal([]byte(capturedJson), &scoopExport)
 	if err != nil {

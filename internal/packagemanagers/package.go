@@ -15,3 +15,13 @@ func NewPackage(name string, installedVersion *Version, latestVersion *Version) 
 		LatestVersion:    latestVersion,
 	}
 }
+
+// NewPackageFromStrings creates a new instance of Package. This is an alternate constructor that takes in string
+// representations of the versions.
+func NewPackageFromStrings(name string, installedVersion string, latestVersion string) *Package {
+	return &Package{
+		Name:             name,
+		InstalledVersion: NewVersion(installedVersion),
+		LatestVersion:    NewVersion(latestVersion),
+	}
+}
