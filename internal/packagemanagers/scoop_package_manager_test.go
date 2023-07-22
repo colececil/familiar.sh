@@ -79,7 +79,29 @@ var _ = Describe("ScoopPackageManager", func() {
 			})
 		})
 
-		PIt("should sort the packages by name", func() {
+		When("the outputs of `scoop export` and `scoop status` are ordered by package name", func() {
+			BeforeEach(func() {
+				scoopExportOutput = createScoopExportOutput([]scoopExportApp{
+					{Name: "package3", Version: "3.2.1", Source: "main"},
+					{Name: "package2", Version: "2.3.4", Source: "main"},
+					{Name: "package1", Version: "1.0.0", Source: "main"},
+				})
+				scoopStatusOutput = createScoopStatusOutput([]*Package{
+					NewPackageFromStrings("package3", "3.2.1", "4.0.0"),
+					NewPackageFromStrings("package2", "2.3.4", "2.5.0"),
+					NewPackageFromStrings("package1", "1.0.0", "1.0.0"),
+				})
+			})
+
+			It("should still return results in order of package name", func() {
+				packages, err := scoopPackageManager.InstalledPackages()
+				Expect(err).To(BeNil())
+				Expect(packages).To(Equal([]*Package{
+					NewPackageFromStrings("package1", "1.0.0", "1.0.0"),
+					NewPackageFromStrings("package2", "2.3.4", "2.5.0"),
+					NewPackageFromStrings("package3", "3.2.1", "4.0.0"),
+				}))
+			})
 		})
 
 		When("`scoop status` doesn't include any packages", func() {
@@ -136,7 +158,7 @@ func createScoopExportOutput(apps []scoopExportApp) string {
 		bucketNames[app.Source] = true
 	}
 
-	buckets := make([]scoopExportBucket, 0)
+	var buckets []scoopExportBucket
 	for bucketName := range bucketNames {
 		buckets = append(buckets, scoopExportBucket{bucketName})
 	}
