@@ -1,6 +1,7 @@
 package packagemanagers_test
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	. "github.com/colececil/familiar.sh/internal/packagemanagers"
@@ -14,13 +15,15 @@ import (
 var _ = Describe("ScoopPackageManager", func() {
 	var operatingSystemServiceDouble *test.OperatingSystemServiceDouble
 	var shellCommandServiceDouble *test.ShellCommandServiceDouble
+	var outputWriterDouble *bytes.Buffer
 	var scoopPackageManager *ScoopPackageManager
 
 	BeforeEach(func() {
 		operatingSystemServiceDouble = test.NewOperatingSystemServiceDouble()
 		shellCommandServiceDouble = test.NewShellCommandServiceDouble()
+		outputWriterDouble = new(bytes.Buffer)
 		scoopPackageManager = NewScoopPackageManager(operatingSystemServiceDouble.OperatingSystemService,
-			shellCommandServiceDouble.ShellCommandService)
+			shellCommandServiceDouble.ShellCommandService, outputWriterDouble)
 	})
 
 	Describe("Name", func() {
@@ -52,6 +55,12 @@ var _ = Describe("ScoopPackageManager", func() {
 		JustBeforeEach(func() {
 			shellCommandServiceDouble.SetOutputForExpectedInputs(scoopExportOutput, "scoop", false, "export")
 			shellCommandServiceDouble.SetOutputForExpectedInputs(scoopStatusOutput, "scoop", false, "status")
+		})
+
+		It("should write output stating it is getting installed package information", func() {
+			scoopPackageManager.InstalledPackages()
+			Expect(outputWriterDouble.String()).To(Equal(
+				"Getting installed package information from package manager \"scoop\"...\n"))
 		})
 
 		When("all packages returned by `scoop export` are included in `scoop status`", func() {
