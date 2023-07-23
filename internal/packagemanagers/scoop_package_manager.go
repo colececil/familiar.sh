@@ -169,7 +169,7 @@ func (scoopPackageManager *ScoopPackageManager) InstalledPackages() ([]*Package,
 		}
 	}
 
-	var installedPackagesSlice []*Package
+	installedPackagesSlice := make([]*Package, 0)
 	for _, installedPackage := range installedPackages {
 		installedPackagesSlice = append(installedPackagesSlice, installedPackage)
 	}

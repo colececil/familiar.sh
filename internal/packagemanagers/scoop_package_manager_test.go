@@ -71,7 +71,7 @@ var _ = Describe("ScoopPackageManager", func() {
 					{Name: "package3", Version: "3.2.1", Source: "main"},
 				})
 				scoopStatusOutput = createScoopStatusOutput([]*Package{
-					NewPackageFromStrings("package1", "1.0.0", "1.0.0"),
+					NewPackageFromStrings("package1", "1.0.0", "1.0.1"),
 					NewPackageFromStrings("package2", "2.3.4", "2.5.0"),
 					NewPackageFromStrings("package3", "3.2.1", "4.0.0"),
 				})
@@ -81,14 +81,14 @@ var _ = Describe("ScoopPackageManager", func() {
 				packages, err := scoopPackageManager.InstalledPackages()
 				Expect(err).To(BeNil())
 				Expect(packages).To(Equal([]*Package{
-					NewPackageFromStrings("package1", "1.0.0", "1.0.0"),
+					NewPackageFromStrings("package1", "1.0.0", "1.0.1"),
 					NewPackageFromStrings("package2", "2.3.4", "2.5.0"),
 					NewPackageFromStrings("package3", "3.2.1", "4.0.0"),
 				}))
 			})
 		})
 
-		When("the outputs of `scoop export` and `scoop status` are ordered by package name", func() {
+		When("the outputs of `scoop export` and `scoop status` are not ordered by package name", func() {
 			BeforeEach(func() {
 				scoopExportOutput = createScoopExportOutput([]scoopExportApp{
 					{Name: "package3", Version: "3.2.1", Source: "main"},
@@ -98,7 +98,7 @@ var _ = Describe("ScoopPackageManager", func() {
 				scoopStatusOutput = createScoopStatusOutput([]*Package{
 					NewPackageFromStrings("package3", "3.2.1", "4.0.0"),
 					NewPackageFromStrings("package2", "2.3.4", "2.5.0"),
-					NewPackageFromStrings("package1", "1.0.0", "1.0.0"),
+					NewPackageFromStrings("package1", "1.0.0", "1.0.1"),
 				})
 			})
 
@@ -106,7 +106,7 @@ var _ = Describe("ScoopPackageManager", func() {
 				packages, err := scoopPackageManager.InstalledPackages()
 				Expect(err).To(BeNil())
 				Expect(packages).To(Equal([]*Package{
-					NewPackageFromStrings("package1", "1.0.0", "1.0.0"),
+					NewPackageFromStrings("package1", "1.0.0", "1.0.1"),
 					NewPackageFromStrings("package2", "2.3.4", "2.5.0"),
 					NewPackageFromStrings("package3", "3.2.1", "4.0.0"),
 				}))
@@ -131,6 +131,99 @@ var _ = Describe("ScoopPackageManager", func() {
 					NewPackageFromStrings("package2", "2.3.4", "2.3.4"),
 					NewPackageFromStrings("package3", "3.2.1", "3.2.1"),
 				}))
+			})
+		})
+
+		When("`scoop status` includes some but not all packages", func() {
+			BeforeEach(func() {
+				scoopExportOutput = createScoopExportOutput([]scoopExportApp{
+					{Name: "package1", Version: "1.0.0", Source: "main"},
+					{Name: "package2", Version: "2.3.4", Source: "main"},
+					{Name: "package3", Version: "3.2.1", Source: "main"},
+				})
+				scoopStatusOutput = createScoopStatusOutput([]*Package{
+					NewPackageFromStrings("package1", "1.0.0", "1.0.1"),
+					NewPackageFromStrings("package3", "3.2.1", "4.0.0"),
+				})
+			})
+
+			It("should indicate that some but not all packages are up to date", func() {
+				packages, err := scoopPackageManager.InstalledPackages()
+				Expect(err).To(BeNil())
+				Expect(packages).To(Equal([]*Package{
+					NewPackageFromStrings("package1", "1.0.0", "1.0.1"),
+					NewPackageFromStrings("package2", "2.3.4", "2.3.4"),
+					NewPackageFromStrings("package3", "3.2.1", "4.0.0"),
+				}))
+			})
+		})
+
+		When("scoop has no packages installed", func() {
+			BeforeEach(func() {
+				scoopExportOutput = createScoopExportOutput([]scoopExportApp{})
+				scoopStatusOutput = createScoopStatusOutput([]*Package{})
+			})
+
+			It("should return an empty slice", func() {
+				packages, err := scoopPackageManager.InstalledPackages()
+				Expect(err).To(BeNil())
+				Expect(packages).To(Equal([]*Package{}))
+			})
+		})
+
+		When("`scoop export` returns invalid JSON", func() {
+			BeforeEach(func() {
+				scoopExportOutput = "invalid json"
+				scoopStatusOutput = createScoopStatusOutput([]*Package{})
+			})
+
+			It("should return a `json.SyntaxError`", func() {
+				_, err := scoopPackageManager.InstalledPackages()
+				Expect(err).To(BeAssignableToTypeOf(&json.SyntaxError{}))
+			})
+		})
+
+		When("`scoop status` output is just arbitrary text with no results", func() {
+			BeforeEach(func() {
+				scoopExportOutput = createScoopExportOutput([]scoopExportApp{
+					{Name: "package1", Version: "1.0.0", Source: "main"},
+					{Name: "package2", Version: "2.3.4", Source: "main"},
+					{Name: "package3", Version: "3.2.1", Source: "main"},
+				})
+				scoopStatusOutput = "arbitrary text"
+			})
+
+			It("should assume all packages are up to date", func() {
+				packages, err := scoopPackageManager.InstalledPackages()
+				Expect(err).To(BeNil())
+				Expect(packages).To(Equal([]*Package{
+					NewPackageFromStrings("package1", "1.0.0", "1.0.0"),
+					NewPackageFromStrings("package2", "2.3.4", "2.3.4"),
+					NewPackageFromStrings("package3", "3.2.1", "3.2.1"),
+				}))
+			})
+		})
+
+		When("a result in `scoop status` has the wrong number of fields", func() {
+			BeforeEach(func() {
+				scoopExportOutput = createScoopExportOutput([]scoopExportApp{
+					{Name: "package1", Version: "1.0.0", Source: "main"},
+					{Name: "package2", Version: "2.3.4", Source: "main"},
+					{Name: "package3", Version: "3.2.1", Source: "main"},
+				})
+				scoopStatusOutput = `Scoop is up to date.
+
+Name Installed Version Latest Version Missing Dependencies Info
+---- ----------------- -------------- -------------------- ----
+package1 1.0.0 1.0.1
+package2
+package3 3.2.1 4.0.0
+`
+			})
+
+			It("should return an error", func() {
+				_, err := scoopPackageManager.InstalledPackages()
+				Expect(err).To(Not(BeNil()))
 			})
 		})
 	})
