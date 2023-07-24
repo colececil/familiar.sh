@@ -78,8 +78,19 @@ func (scoopPackageManager *ScoopPackageManager) Update() error {
 		return err
 	}
 
-	_, err = scoopPackageManager.shellCommandService.RunShellCommand(scoopPackageManager.Name(), true, nil, "update")
+	// Scoop doesn't return non-zero exit codes, so we have to check the output to see if the operation was successful.
+	regexString := "(Scoop was updated)"
+	successRegex, err := regexp.Compile(regexString)
 	if err != nil {
+		return err
+	}
+
+	capturedSuccess, err := scoopPackageManager.shellCommandService.RunShellCommand(scoopPackageManager.Name(), true,
+		successRegex, "update")
+	if err != nil || capturedSuccess == "" {
+		if err == nil {
+			err = fmt.Errorf("error updating package manager \"%s\"", scoopPackageManager.Name())
+		}
 		return err
 	}
 
@@ -95,11 +106,18 @@ func (scoopPackageManager *ScoopPackageManager) Uninstall() error {
 	}
 
 	// Scoop doesn't return non-zero exit codes, so we have to check the output to see if the operation was successful.
-	// Todo: Add a regex to make sure the operation was successful.
-
-	_, err = scoopPackageManager.shellCommandService.RunShellCommand(scoopPackageManager.Name(), true, nil,
-		"uninstall", scoopPackageManager.Name())
+	regexString := fmt.Sprintf("('%s' was uninstalled)", scoopPackageManager.Name())
+	successRegex, err := regexp.Compile(regexString)
 	if err != nil {
+		return err
+	}
+
+	capturedSuccess, err := scoopPackageManager.shellCommandService.RunShellCommand(scoopPackageManager.Name(), true,
+		successRegex, "uninstall", scoopPackageManager.Name())
+	if err != nil || capturedSuccess == "" {
+		if err == nil {
+			err = fmt.Errorf("error uninstalling package manager \"%s\"", scoopPackageManager.Name())
+		}
 		return err
 	}
 

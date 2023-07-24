@@ -13,11 +13,13 @@ type ShellCommandServiceDouble struct {
 	ShellCommandService *system.ShellCommandService
 }
 
-var expectedInputToOutput map[shellCommandFuncInputs]string
+var outputsGivenExpectedInputs map[shellCommandFuncInputs]string
+var inputsUsed map[shellCommandFuncInputs]bool
 
 // NewShellCommandServiceDouble returns a new instance of ShellCommandServiceDouble.
 func NewShellCommandServiceDouble() *ShellCommandServiceDouble {
-	expectedInputToOutput = make(map[shellCommandFuncInputs]string)
+	outputsGivenExpectedInputs = make(map[shellCommandFuncInputs]string)
+	inputsUsed = make(map[shellCommandFuncInputs]bool)
 	return &ShellCommandServiceDouble{
 		ShellCommandService: system.NewShellCommandService(runShellCommandFuncDouble),
 	}
@@ -40,7 +42,18 @@ func (shellCommandServiceDouble *ShellCommandServiceDouble) SetOutputForExpected
 		printOutput: expectedPrintOutput,
 		args:        strings.Join(expectedArgs, " "),
 	}
-	expectedInputToOutput[inputs] = output
+	outputsGivenExpectedInputs[inputs] = output
+}
+
+// WasCalledWith returns whether the test double's RunShellCommand function was called with the given inputs.
+func (shellCommandServiceDouble *ShellCommandServiceDouble) WasCalledWith(program string, printOutput bool,
+	args ...string) bool {
+	inputs := shellCommandFuncInputs{
+		program:     program,
+		printOutput: printOutput,
+		args:        strings.Join(args, " "),
+	}
+	return inputsUsed[inputs]
 }
 
 // runShellCommandFuncDouble is the implementation for the test double's RunShellCommand function. If an output has been
@@ -52,9 +65,9 @@ func runShellCommandFuncDouble(program string, printOutput bool, resultCaptureRe
 		printOutput: printOutput,
 		args:        strings.Join(args, " "),
 	}
+	inputsUsed[inputs] = true
 
-	output, isPresent := expectedInputToOutput[inputs]
-
+	output, isPresent := outputsGivenExpectedInputs[inputs]
 	if !isPresent {
 		return "", fmt.Errorf("unexpected input")
 	}
