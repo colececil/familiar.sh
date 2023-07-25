@@ -326,24 +326,100 @@ package3 3.2.1 4.0.0
 	})
 
 	Describe("InstallPackage", func() {
-		PIt("should write output stating it is installing the given package", func() {
+		const packageName = "package1"
+		const packageVersion = "1.0.0"
+
+		It("should write output stating it is installing the given package", func() {
+			scoopPackageManager.InstallPackage(packageName, nil)
+			Expect(outputWriterDouble.String()).To(Equal(fmt.Sprintf("Installing package \"%s\"...\n", packageName)))
 		})
 
-		PIt("should capture the version number from the `scoop install` command's output and return it", func() {
+		It("should capture the version number from the `scoop install` command's output and return it", func() {
+			commandOutput := `some output
+some more output
+'%s' (%s) was installed successfully!`
+			commandOutput = fmt.Sprintf(commandOutput, packageName, packageVersion)
+			shellCommandServiceDouble.SetOutputForExpectedInputs(commandOutput, "scoop", true, "install", packageName)
+			result, err := scoopPackageManager.InstallPackage(packageName, nil)
+			Expect(err).To(BeNil())
+			Expect(result.String()).To(Equal(packageVersion))
 		})
 
-		PIt("should return an error if the `scoop install` command returns an error", func() {
+		It("should return an error if the `scoop install` command returns an error", func() {
+			_, err := scoopPackageManager.InstallPackage(packageName, nil)
+			Expect(err).To(Not(BeNil()))
 		})
 
-		PIt("should return an error if the `scoop install` command output does not contain \"'<package>' <version> "+
+		It("should return an error if the `scoop install` command output does not contain \"'<package>' (<version>) "+
 			"was installed\"", func() {
+			shellCommandServiceDouble.SetOutputForExpectedInputs("some output", "scoop", true, "install", packageName)
+			_, err := scoopPackageManager.InstallPackage(packageName, nil)
+			Expect(err).To(Not(BeNil()))
 		})
 	})
 
 	Describe("UpdatePackage", func() {
+		const packageName = "package1"
+		const packageVersion = "1.0.1"
+
+		It("should write output stating it is updating the given package", func() {
+			scoopPackageManager.UpdatePackage(packageName, nil)
+			Expect(outputWriterDouble.String()).To(Equal(fmt.Sprintf("Updating package \"%s\"...\n", packageName)))
+		})
+
+		It("should capture the version number from the `scoop update` command's output and return it", func() {
+			commandOutput := `some output
+some more output
+'%s' (%s) was installed successfully!`
+			commandOutput = fmt.Sprintf(commandOutput, packageName, packageVersion)
+			shellCommandServiceDouble.SetOutputForExpectedInputs(commandOutput, "scoop", true, "update", packageName)
+			result, err := scoopPackageManager.UpdatePackage(packageName, nil)
+			Expect(err).To(BeNil())
+			Expect(result.String()).To(Equal(packageVersion))
+		})
+
+		It("should return an error if the `scoop update` command returns an error", func() {
+			_, err := scoopPackageManager.UpdatePackage(packageName, nil)
+			Expect(err).To(Not(BeNil()))
+		})
+
+		It("should return an error if the `scoop update` command output does not contain \"'<package>' (<version>) "+
+			"was installed\"", func() {
+			shellCommandServiceDouble.SetOutputForExpectedInputs("some output", "scoop", true, "update", packageName)
+			_, err := scoopPackageManager.UpdatePackage(packageName, nil)
+			Expect(err).To(Not(BeNil()))
+		})
 	})
 
 	Describe("UninstallPackage", func() {
+		const packageName = "package1"
+
+		It("should write output stating it is uninstalling the given package", func() {
+			scoopPackageManager.UninstallPackage(packageName)
+			Expect(outputWriterDouble.String()).To(Equal(fmt.Sprintf("Uninstalling package \"%s\"...\n", packageName)))
+		})
+
+		It("should run the `scoop uninstall` command and show its output", func() {
+			commandOutput := `some output
+some more output
+'%s' was uninstalled.`
+			commandOutput = fmt.Sprintf(commandOutput, packageName)
+			shellCommandServiceDouble.SetOutputForExpectedInputs(commandOutput, "scoop", true, "uninstall", packageName)
+			err := scoopPackageManager.UninstallPackage(packageName)
+			Expect(err).To(BeNil())
+		})
+
+		It("should return an error if the `scoop uninstall` command returns an error", func() {
+			err := scoopPackageManager.UninstallPackage(packageName)
+			Expect(err).To(Not(BeNil()))
+		})
+
+		It("should return an error if the `scoop uninstall` command output does not contain \"'<package>' "+
+			"was uninstalled\"", func() {
+			shellCommandServiceDouble.SetOutputForExpectedInputs("some output", "scoop", true, "uninstall", packageName)
+			err := scoopPackageManager.UninstallPackage(packageName)
+			Expect(err).To(Not(BeNil()))
+		})
 	})
 })
 
