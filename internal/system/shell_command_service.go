@@ -10,23 +10,17 @@ import (
 
 // ShellCommandService provides functionality for running shell commands.
 type ShellCommandService struct {
-	runShellCommandFunc RunShellCommandFunc
+	createShellCommandFunc CreateShellCommandFunc
+	runShellCommandFunc    RunShellCommandFunc
 }
 
 // NewShellCommandService returns a new instance of ShellCommandService.
-func NewShellCommandService(runShellCommandFunc RunShellCommandFunc) *ShellCommandService {
+func NewShellCommandService(createShellCommandFunc CreateShellCommandFunc,
+	runShellCommandFunc RunShellCommandFunc) *ShellCommandService {
 	return &ShellCommandService{
-		runShellCommandFunc: runShellCommandFunc,
+		createShellCommandFunc: createShellCommandFunc,
+		runShellCommandFunc:    runShellCommandFunc,
 	}
-}
-
-// RunShellCommandFunc is a function for running a shell command.
-type RunShellCommandFunc func(program string, printOutput bool, resultCaptureRegex *regexp.Regexp,
-	args ...string) (string, error)
-
-// NewRunShellCommandFunc returns a new instance of RunShellCommandFunc.
-func NewRunShellCommandFunc() RunShellCommandFunc {
-	return defaultRunShellCommandFunc
 }
 
 // RunShellCommand runs a shell command for the given program and the given arguments. The command's output is printed
@@ -43,13 +37,36 @@ func NewRunShellCommandFunc() RunShellCommandFunc {
 // the result is an empty string.
 func (shellCommandService *ShellCommandService) RunShellCommand(program string, printOutput bool,
 	resultCaptureRegex *regexp.Regexp, args ...string) (string, error) {
-	return shellCommandService.runShellCommandFunc(program, printOutput, resultCaptureRegex, args...)
+	return shellCommandService.runShellCommandFunc(shellCommandService.createShellCommandFunc, program, printOutput,
+		resultCaptureRegex, args...)
+}
+
+// CreateShellCommandFunc is a function for creating a shell command to be run.
+type CreateShellCommandFunc func(program string, args ...string) *exec.Cmd
+
+// NewCreateShellCommandFunc returns a new instance of CreateShellCommandFunc.
+func NewCreateShellCommandFunc() CreateShellCommandFunc {
+	return defaultCreateShellCommandFunc
+}
+
+// defaultCreateShellCommandFunc is the default implementation of CreateShellCommandFunc.
+func defaultCreateShellCommandFunc(program string, args ...string) *exec.Cmd {
+	return exec.Command(program, args...)
+}
+
+// RunShellCommandFunc is a function for running a shell command.
+type RunShellCommandFunc func(createShellCommand CreateShellCommandFunc, program string, printOutput bool,
+	resultCaptureRegex *regexp.Regexp, args ...string) (string, error)
+
+// NewRunShellCommandFunc returns a new instance of RunShellCommandFunc.
+func NewRunShellCommandFunc() RunShellCommandFunc {
+	return defaultRunShellCommandFunc
 }
 
 // defaultRunShellCommandFunc is the default implementation of RunShellCommandFunc.
-func defaultRunShellCommandFunc(program string, printOutput bool,
+func defaultRunShellCommandFunc(createShellCommand CreateShellCommandFunc, program string, printOutput bool,
 	resultCaptureRegex *regexp.Regexp, args ...string) (string, error) {
-	command := exec.Command(program, args...)
+	command := createShellCommand(program, args...)
 
 	stdout, err := command.StdoutPipe()
 	if err != nil {
@@ -101,7 +118,8 @@ func defaultRunShellCommandFunc(program string, printOutput bool,
 // It takes the following parameters:
 //   - reader: The Reader to read from.
 //   - printOutput: Whether to print the output.
-//   - resultCaptureRegex: A regular expression that captures any results. If this is nil, no results are captured.
+//   - resultCaptureRegex: A regular expression that captures any results using a capturing group. If this is nil or has
+//     no capturing group, no results are captured.
 //   - results: The channel to write any results to.
 //   - errs: The channel to write any errors to.
 func readLines(reader io.Reader, printOutput bool, resultCaptureRegex *regexp.Regexp, results chan<- string,

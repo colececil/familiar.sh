@@ -29,6 +29,7 @@ var providers = wire.NewSet(
 	packagemanagers.NewScoopPackageManager,
 	system.NewIsWindowsFunc,
 	system.NewOperatingSystemService,
+	system.NewCreateShellCommandFunc,
 	system.NewRunShellCommandFunc,
 	system.NewShellCommandService,
 )
