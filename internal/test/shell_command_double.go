@@ -2,7 +2,6 @@ package test
 
 import (
 	"github.com/colececil/familiar.sh/internal/system"
-	"os/exec"
 	"strings"
 )
 
@@ -11,11 +10,11 @@ type ShellCommandDouble struct {
 	CreateShellCommandFunc system.CreateShellCommandFunc
 }
 
-var createShellCommandExpectedInputs map[createShellCommandFuncInputs]*exec.Cmd
+var createShellCommandExpectedInputs map[createShellCommandFuncInputs]system.ShellCommand
 
 // NewShellCommandDouble returns a new instance of ShellCommandDouble.
 func NewShellCommandDouble() *ShellCommandDouble {
-	createShellCommandExpectedInputs = make(map[createShellCommandFuncInputs]*exec.Cmd)
+	createShellCommandExpectedInputs = make(map[createShellCommandFuncInputs]system.ShellCommand)
 	return &ShellCommandDouble{
 		CreateShellCommandFunc: createShellCommandFuncDouble,
 	}
@@ -30,8 +29,8 @@ type createShellCommandFuncInputs struct {
 
 // SetOutputForExpectedInputs sets the output to return when the test double's CreateShellCommandFunc function is called
 // with the given inputs.
-func (shellCommandDouble *ShellCommandDouble) SetOutputForExpectedInputs(output *exec.Cmd, expectedProgram string,
-	expectedArgs ...string) {
+func (shellCommandDouble *ShellCommandDouble) SetOutputForExpectedInputs(output system.ShellCommand,
+	expectedProgram string, expectedArgs ...string) {
 	inputs := createShellCommandFuncInputs{
 		program: expectedProgram,
 		args:    strings.Join(expectedArgs, " "),
@@ -41,7 +40,7 @@ func (shellCommandDouble *ShellCommandDouble) SetOutputForExpectedInputs(output 
 
 // createShellCommandFuncDouble is the implementation of the test double's CreateShellCommandFunc function. If an output
 // has been set for the given inputs, it will be returned. Otherwise, exec.Command("") is returned.
-func createShellCommandFuncDouble(program string, args ...string) *exec.Cmd {
+func createShellCommandFuncDouble(program string, args ...string) system.ShellCommand {
 	inputs := createShellCommandFuncInputs{
 		program: program,
 		args:    strings.Join(args, " "),
@@ -49,7 +48,7 @@ func createShellCommandFuncDouble(program string, args ...string) *exec.Cmd {
 
 	output, isPresent := createShellCommandExpectedInputs[inputs]
 	if !isPresent {
-		return exec.Command("")
+		return system.NewRealShellCommand("")
 	}
 
 	return output

@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"os/exec"
 	"regexp"
 )
 
@@ -42,7 +41,7 @@ func (shellCommandService *ShellCommandService) RunShellCommand(program string, 
 }
 
 // CreateShellCommandFunc is a function for creating a shell command to be run.
-type CreateShellCommandFunc func(program string, args ...string) *exec.Cmd
+type CreateShellCommandFunc func(program string, args ...string) ShellCommand
 
 // NewCreateShellCommandFunc returns a new instance of CreateShellCommandFunc.
 func NewCreateShellCommandFunc() CreateShellCommandFunc {
@@ -50,8 +49,8 @@ func NewCreateShellCommandFunc() CreateShellCommandFunc {
 }
 
 // defaultCreateShellCommandFunc is the default implementation of CreateShellCommandFunc.
-func defaultCreateShellCommandFunc(program string, args ...string) *exec.Cmd {
-	return exec.Command(program, args...)
+func defaultCreateShellCommandFunc(program string, args ...string) ShellCommand {
+	return NewRealShellCommand(program, args...)
 }
 
 // RunShellCommandFunc is a function for running a shell command.
@@ -103,9 +102,8 @@ func defaultRunShellCommandFunc(createShellCommand CreateShellCommandFunc, progr
 	default:
 	}
 
-	if command.ProcessState.ExitCode() != 0 {
-		return "", fmt.Errorf("error running command \"%s %s\", with exit code %d", program, args,
-			command.ProcessState.ExitCode())
+	if exitCode := command.ExitCode(); exitCode != 0 {
+		return "", fmt.Errorf("error running command \"%s %s\", with exit code %d", program, args, exitCode)
 	}
 
 	return result, nil
