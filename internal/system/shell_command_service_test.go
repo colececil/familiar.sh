@@ -1,6 +1,7 @@
 package system_test
 
 import (
+	"bytes"
 	. "github.com/colececil/familiar.sh/internal/system"
 	"github.com/colececil/familiar.sh/internal/test"
 	. "github.com/onsi/ginkgo/v2"
@@ -9,23 +10,40 @@ import (
 
 var _ = Describe("ShellCommandService", func() {
 	var shellCommandDouble *test.ShellCommandDouble
+	var outputWriterDouble *bytes.Buffer
 	var shellCommandService *ShellCommandService
 
-	const program = "program"
-	const programArg = "arg"
+	const expectedProgram = "program"
+	const expectedProgramArg = "arg"
+	const programStdout = `This is
+the program's output
+`
+	const programStderr = `This is
+the program's error output
+`
+	const programExitCode = 0
 
 	BeforeEach(func() {
-		shellCommandDouble = test.NewShellCommandDouble()
+		shellCommandDouble = test.NewShellCommandDouble(programStdout, programStderr, programExitCode)
+		createShellCommandFuncDouble := func(program string, args ...string) ShellCommand {
+			if program == expectedProgram && len(args) == 1 && args[0] == expectedProgramArg {
+				return shellCommandDouble
+			}
+			return NewRealShellCommand("")
+		}
+		outputWriterDouble = new(bytes.Buffer)
 		shellCommandService = NewShellCommandService(
-			shellCommandDouble.CreateShellCommandFunc,
+			createShellCommandFuncDouble,
 			NewRunShellCommandFunc(),
+			outputWriterDouble,
 		)
 	})
 
 	When("`printOutput` is set to `true`", func() {
 		It("should print the command output", func() {
-			_, err := shellCommandService.RunShellCommand(program, true, nil, programArg)
+			_, err := shellCommandService.RunShellCommand(expectedProgram, true, nil, expectedProgramArg)
 			Expect(err).To(BeNil())
+			Expect(outputWriterDouble.String()).To(Equal(programStdout))
 		})
 
 		It("should print both the stdout and stderr command output", func() {

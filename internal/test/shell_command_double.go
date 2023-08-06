@@ -1,55 +1,44 @@
 package test
 
 import (
-	"github.com/colececil/familiar.sh/internal/system"
-	"strings"
+	"bytes"
+	"io"
 )
 
 // ShellCommandDouble is a test double for exec.Command.
 type ShellCommandDouble struct {
-	CreateShellCommandFunc system.CreateShellCommandFunc
+	stdoutOutput string
+	stderrOutput string
+	exitCode     int
 }
-
-var createShellCommandExpectedInputs map[createShellCommandFuncInputs]system.ShellCommand
 
 // NewShellCommandDouble returns a new instance of ShellCommandDouble.
-func NewShellCommandDouble() *ShellCommandDouble {
-	createShellCommandExpectedInputs = make(map[createShellCommandFuncInputs]system.ShellCommand)
+func NewShellCommandDouble(stdoutOutput string, stderrOutput string, exitCode int) *ShellCommandDouble {
 	return &ShellCommandDouble{
-		CreateShellCommandFunc: createShellCommandFuncDouble,
+		stdoutOutput: stdoutOutput,
+		stderrOutput: stderrOutput,
+		exitCode:     exitCode,
 	}
 }
 
-// createShellCommandFuncInputs represents the input parameters used by the test double to determine the instance of
-// *exec.Cmd to return.
-type createShellCommandFuncInputs struct {
-	program string
-	args    string
+func (shellCommandDouble *ShellCommandDouble) StdoutPipe() (io.ReadCloser, error) {
+	return io.NopCloser(bytes.NewBufferString(shellCommandDouble.stdoutOutput)), nil
 }
 
-// SetOutputForExpectedInputs sets the output to return when the test double's CreateShellCommandFunc function is called
-// with the given inputs.
-func (shellCommandDouble *ShellCommandDouble) SetOutputForExpectedInputs(output system.ShellCommand,
-	expectedProgram string, expectedArgs ...string) {
-	inputs := createShellCommandFuncInputs{
-		program: expectedProgram,
-		args:    strings.Join(expectedArgs, " "),
-	}
-	createShellCommandExpectedInputs[inputs] = output
+func (shellCommandDouble *ShellCommandDouble) StderrPipe() (io.ReadCloser, error) {
+	return io.NopCloser(bytes.NewBufferString(shellCommandDouble.stderrOutput)), nil
 }
 
-// createShellCommandFuncDouble is the implementation of the test double's CreateShellCommandFunc function. If an output
-// has been set for the given inputs, it will be returned. Otherwise, exec.Command("") is returned.
-func createShellCommandFuncDouble(program string, args ...string) system.ShellCommand {
-	inputs := createShellCommandFuncInputs{
-		program: program,
-		args:    strings.Join(args, " "),
-	}
+func (shellCommandDouble *ShellCommandDouble) Start() error {
+	// Todo: Make `Wait` throw an error if this method is not called first.
+	return nil
+}
 
-	output, isPresent := createShellCommandExpectedInputs[inputs]
-	if !isPresent {
-		return system.NewRealShellCommand("")
-	}
+func (shellCommandDouble *ShellCommandDouble) Wait() error {
+	// Todo: Make this wait until copying from stdout and stderr is complete.
+	return nil
+}
 
-	return output
+func (shellCommandDouble *ShellCommandDouble) ExitCode() int {
+	return shellCommandDouble.exitCode
 }

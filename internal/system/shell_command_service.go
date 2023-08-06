@@ -11,14 +11,16 @@ import (
 type ShellCommandService struct {
 	createShellCommandFunc CreateShellCommandFunc
 	runShellCommandFunc    RunShellCommandFunc
+	outputWriter           io.Writer
 }
 
 // NewShellCommandService returns a new instance of ShellCommandService.
-func NewShellCommandService(createShellCommandFunc CreateShellCommandFunc,
-	runShellCommandFunc RunShellCommandFunc) *ShellCommandService {
+func NewShellCommandService(createShellCommandFunc CreateShellCommandFunc, runShellCommandFunc RunShellCommandFunc,
+	outputWriter io.Writer) *ShellCommandService {
 	return &ShellCommandService{
 		createShellCommandFunc: createShellCommandFunc,
 		runShellCommandFunc:    runShellCommandFunc,
+		outputWriter:           outputWriter,
 	}
 }
 
@@ -36,8 +38,8 @@ func NewShellCommandService(createShellCommandFunc CreateShellCommandFunc,
 // the result is an empty string.
 func (shellCommandService *ShellCommandService) RunShellCommand(program string, printOutput bool,
 	resultCaptureRegex *regexp.Regexp, args ...string) (string, error) {
-	return shellCommandService.runShellCommandFunc(shellCommandService.createShellCommandFunc, program, printOutput,
-		resultCaptureRegex, args...)
+	return shellCommandService.runShellCommandFunc(shellCommandService.createShellCommandFunc,
+		shellCommandService.outputWriter, program, printOutput, resultCaptureRegex, args...)
 }
 
 // CreateShellCommandFunc is a function for creating a shell command to be run.
@@ -54,8 +56,8 @@ func defaultCreateShellCommandFunc(program string, args ...string) ShellCommand 
 }
 
 // RunShellCommandFunc is a function for running a shell command.
-type RunShellCommandFunc func(createShellCommand CreateShellCommandFunc, program string, printOutput bool,
-	resultCaptureRegex *regexp.Regexp, args ...string) (string, error)
+type RunShellCommandFunc func(createShellCommand CreateShellCommandFunc, outputWriter io.Writer, program string,
+	printOutput bool, resultCaptureRegex *regexp.Regexp, args ...string) (string, error)
 
 // NewRunShellCommandFunc returns a new instance of RunShellCommandFunc.
 func NewRunShellCommandFunc() RunShellCommandFunc {
@@ -63,8 +65,8 @@ func NewRunShellCommandFunc() RunShellCommandFunc {
 }
 
 // defaultRunShellCommandFunc is the default implementation of RunShellCommandFunc.
-func defaultRunShellCommandFunc(createShellCommand CreateShellCommandFunc, program string, printOutput bool,
-	resultCaptureRegex *regexp.Regexp, args ...string) (string, error) {
+func defaultRunShellCommandFunc(createShellCommand CreateShellCommandFunc, outputWriter io.Writer, program string,
+	printOutput bool, resultCaptureRegex *regexp.Regexp, args ...string) (string, error) {
 	command := createShellCommand(program, args...)
 
 	stdout, err := command.StdoutPipe()
@@ -81,10 +83,15 @@ func defaultRunShellCommandFunc(createShellCommand CreateShellCommandFunc, progr
 		return "", err
 	}
 
+	var optionalOutputWriter io.Writer
+	if printOutput {
+		optionalOutputWriter = outputWriter
+	}
+
 	errs := make(chan error)
 	results := make(chan string)
-	go readLines(stdout, printOutput, resultCaptureRegex, results, errs)
-	go readLines(stderr, printOutput, nil, results, errs)
+	go readLines(stdout, optionalOutputWriter, resultCaptureRegex, results, errs)
+	go readLines(stderr, optionalOutputWriter, nil, results, errs)
 
 	select {
 	case err := <-errs:
@@ -115,12 +122,12 @@ func defaultRunShellCommandFunc(createShellCommand CreateShellCommandFunc, progr
 //
 // It takes the following parameters:
 //   - reader: The Reader to read from.
-//   - printOutput: Whether to print the output.
+//   - outputWriter: The Writer to print the output to. If nil, no output is printed.
 //   - resultCaptureRegex: A regular expression that captures any results using a capturing group. If this is nil or has
 //     no capturing group, no results are captured.
 //   - results: The channel to write any results to.
 //   - errs: The channel to write any errors to.
-func readLines(reader io.Reader, printOutput bool, resultCaptureRegex *regexp.Regexp, results chan<- string,
+func readLines(reader io.Reader, outputWriter io.Writer, resultCaptureRegex *regexp.Regexp, results chan<- string,
 	errs chan<- error) {
 	scanner := bufio.NewScanner(reader)
 
@@ -128,8 +135,10 @@ func readLines(reader io.Reader, printOutput bool, resultCaptureRegex *regexp.Re
 	for scanner.Scan() {
 		line := scanner.Text()
 		cumulativeOutput += line + "\n"
-		if printOutput {
-			fmt.Println(line)
+		if outputWriter != nil {
+			if _, err := fmt.Fprintln(outputWriter, line); err != nil {
+				errs <- err
+			}
 		}
 	}
 

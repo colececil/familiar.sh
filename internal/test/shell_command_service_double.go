@@ -1,8 +1,10 @@
 package test
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/colececil/familiar.sh/internal/system"
+	"io"
 	"regexp"
 	"strings"
 )
@@ -24,6 +26,7 @@ func NewShellCommandServiceDouble() *ShellCommandServiceDouble {
 		ShellCommandService: system.NewShellCommandService(
 			system.NewCreateShellCommandFunc(),
 			runShellCommandFuncDouble,
+			new(bytes.Buffer),
 		),
 	}
 }
@@ -61,8 +64,8 @@ func (shellCommandServiceDouble *ShellCommandServiceDouble) WasCalledWith(progra
 
 // runShellCommandFuncDouble is the implementation for the test double's RunShellCommandFunc function. If an output has
 // been set for the given inputs, resultCaptureRegex is run on the output and the result is returned.
-func runShellCommandFuncDouble(createShellCommand system.CreateShellCommandFunc, program string, printOutput bool,
-	resultCaptureRegex *regexp.Regexp, args ...string) (string, error) {
+func runShellCommandFuncDouble(createShellCommand system.CreateShellCommandFunc, outputWriter io.Writer, program string,
+	printOutput bool, resultCaptureRegex *regexp.Regexp, args ...string) (string, error) {
 	inputs := runShellCommandFuncInputs{
 		program:     program,
 		printOutput: printOutput,
