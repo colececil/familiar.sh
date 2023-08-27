@@ -91,8 +91,8 @@ func defaultRunShellCommandFunc(createShellCommand CreateShellCommandFunc, outpu
 
 	waitGroup := &sync.WaitGroup{}
 	waitGroup.Add(2)
-	errorChannel := make(chan error)
-	resultChannel := make(chan string)
+	errorChannel := make(chan error, 2)
+	resultChannel := make(chan string, 1)
 
 	go readLines(stdout, optionalOutputWriter, resultCaptureRegex, waitGroup, resultChannel, errorChannel)
 	go readLines(stderr, optionalOutputWriter, nil, waitGroup, resultChannel, errorChannel)
@@ -152,7 +152,10 @@ func readLines(reader io.Reader, outputWriter io.Writer, resultCaptureRegex *reg
 		return
 	}
 
-	if resultCaptureRegex != nil && resultCaptureRegex.MatchString(cumulativeOutput) {
-		resultChannel <- resultCaptureRegex.FindStringSubmatch(cumulativeOutput)[1]
+	if resultCaptureRegex != nil {
+		matchAndSubmatches := resultCaptureRegex.FindStringSubmatch(cumulativeOutput)
+		if len(matchAndSubmatches) > 1 {
+			resultChannel <- matchAndSubmatches[1]
+		}
 	}
 }

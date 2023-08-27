@@ -20,7 +20,7 @@ type ShellCommandDouble struct {
 }
 
 type ShellCommandDoubleExecutionFunc func(stdoutWriter io.Writer, stderrWriter io.Writer, errorChannel chan<- error,
-	completionChannel chan<- int)
+	exitCodeChannel chan<- int)
 
 // NewShellCommandDouble returns a new instance of ShellCommandDouble.
 func NewShellCommandDouble(executionFunc ShellCommandDoubleExecutionFunc) *ShellCommandDouble {
