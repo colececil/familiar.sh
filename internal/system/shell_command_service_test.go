@@ -6,6 +6,8 @@ import (
 	"github.com/colececil/familiar.sh/internal/test"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"io"
+	"time"
 )
 
 var _ = Describe("ShellCommandService", func() {
@@ -16,7 +18,7 @@ var _ = Describe("ShellCommandService", func() {
 	const expectedProgram = "program"
 	const expectedProgramArg = "arg"
 	const programStdout = `This is
-the program's output
+the program's standard output
 `
 	const programStderr = `This is
 the program's error output
@@ -24,7 +26,6 @@ the program's error output
 	const programExitCode = 0
 
 	BeforeEach(func() {
-		shellCommandDouble = test.NewShellCommandDouble(programStdout, programStderr, programExitCode)
 		createShellCommandFuncDouble := func(program string, args ...string) ShellCommand {
 			if program == expectedProgram && len(args) == 1 && args[0] == expectedProgramArg {
 				return shellCommandDouble
@@ -41,12 +42,46 @@ the program's error output
 
 	When("`printOutput` is set to `true`", func() {
 		It("should print the command output", func() {
+			shellCommandDouble = test.NewShellCommandDouble(
+				func(stdoutWriter io.Writer, stderrWriter io.Writer, errorChannel chan<- error,
+					completionChannel chan<- int) {
+
+					if _, err := stdoutWriter.Write([]byte(programStdout)); err != nil {
+						errorChannel <- err
+						return
+					}
+					completionChannel <- programExitCode
+				},
+			)
+
 			_, err := shellCommandService.RunShellCommand(expectedProgram, true, nil, expectedProgramArg)
+
 			Expect(err).To(BeNil())
 			Expect(outputWriterDouble.String()).To(Equal(programStdout))
 		})
 
 		It("should print both the stdout and stderr command output", func() {
+			shellCommandDouble = test.NewShellCommandDouble(
+				func(stdoutWriter io.Writer, stderrWriter io.Writer, errorChannel chan<- error,
+					completionChannel chan<- int) {
+
+					if _, err := stdoutWriter.Write([]byte(programStdout)); err != nil {
+						errorChannel <- err
+						return
+					}
+					time.Sleep(100 * time.Millisecond)
+					if _, err := stderrWriter.Write([]byte(programStderr)); err != nil {
+						errorChannel <- err
+						return
+					}
+					completionChannel <- programExitCode
+				},
+			)
+
+			_, err := shellCommandService.RunShellCommand(expectedProgram, true, nil, expectedProgramArg)
+
+			Expect(err).To(BeNil())
+			Expect(outputWriterDouble.String()).To(Equal(programStdout + programStderr))
 		})
 
 		It("should print each line of the command output as soon as it becomes available", func() {

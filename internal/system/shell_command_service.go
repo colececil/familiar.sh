@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"regexp"
+	"sync"
 )
 
 // ShellCommandService provides functionality for running shell commands.
@@ -88,24 +89,25 @@ func defaultRunShellCommandFunc(createShellCommand CreateShellCommandFunc, outpu
 		optionalOutputWriter = outputWriter
 	}
 
-	errs := make(chan error)
-	results := make(chan string)
-	go readLines(stdout, optionalOutputWriter, resultCaptureRegex, results, errs)
-	go readLines(stderr, optionalOutputWriter, nil, results, errs)
+	waitGroup := &sync.WaitGroup{}
+	waitGroup.Add(2)
+	errorChannel := make(chan error)
+	resultChannel := make(chan string)
 
-	select {
-	case err := <-errs:
-		return "", err
-	default:
-	}
+	go readLines(stdout, optionalOutputWriter, resultCaptureRegex, waitGroup, resultChannel, errorChannel)
+	go readLines(stderr, optionalOutputWriter, nil, waitGroup, resultChannel, errorChannel)
 
 	if err := command.Wait(); err != nil {
 		return "", err
 	}
 
+	waitGroup.Wait()
+
 	result := ""
 	select {
-	case result = <-results:
+	case err := <-errorChannel:
+		return "", err
+	case result = <-resultChannel:
 	default:
 	}
 
@@ -116,37 +118,41 @@ func defaultRunShellCommandFunc(createShellCommand CreateShellCommandFunc, outpu
 	return result, nil
 }
 
-// readLines reads all lines of text from the given Reader and prints them to stdout. If the given regular expression
-// finds a match, its submatch is written to the given results channel. If any error is encountered, it is written to
-// the given error channel.
+// readLines reads all lines of text from the given Reader and prints them to the given output writer. If the given
+// regular expression finds a match, its submatch is written to the given results channel. If any error is encountered,
+// it is written to the given error channel.
 //
 // It takes the following parameters:
 //   - reader: The Reader to read from.
 //   - outputWriter: The Writer to print the output to. If nil, no output is printed.
 //   - resultCaptureRegex: A regular expression that captures any results using a capturing group. If this is nil or has
 //     no capturing group, no results are captured.
-//   - results: The channel to write any results to.
-//   - errs: The channel to write any errors to.
-func readLines(reader io.Reader, outputWriter io.Writer, resultCaptureRegex *regexp.Regexp, results chan<- string,
-	errs chan<- error) {
-	scanner := bufio.NewScanner(reader)
+//   - resultChannel: The channel to write the result to, if there is one.
+//   - errorChannel: The channel to write an error to, if there is one.
+//   - waitGroup: The WaitGroup to notify when the function has finished.
+func readLines(reader io.Reader, outputWriter io.Writer, resultCaptureRegex *regexp.Regexp, waitGroup *sync.WaitGroup,
+	resultChannel chan<- string, errorChannel chan<- error) {
 
+	defer waitGroup.Done()
+
+	scanner := bufio.NewScanner(reader)
 	var cumulativeOutput = ""
 	for scanner.Scan() {
 		line := scanner.Text()
 		cumulativeOutput += line + "\n"
 		if outputWriter != nil {
 			if _, err := fmt.Fprintln(outputWriter, line); err != nil {
-				errs <- err
+				errorChannel <- err
 			}
 		}
 	}
 
-	if resultCaptureRegex != nil && resultCaptureRegex.MatchString(cumulativeOutput) {
-		results <- resultCaptureRegex.FindStringSubmatch(cumulativeOutput)[1]
+	if err := scanner.Err(); err != nil {
+		errorChannel <- err
+		return
 	}
 
-	if err := scanner.Err(); err != nil {
-		errs <- err
+	if resultCaptureRegex != nil && resultCaptureRegex.MatchString(cumulativeOutput) {
+		resultChannel <- resultCaptureRegex.FindStringSubmatch(cumulativeOutput)[1]
 	}
 }
