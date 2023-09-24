@@ -61,6 +61,10 @@ func (shellCommandDouble *ShellCommandDouble) StderrPipe() (io.ReadCloser, error
 }
 
 func (shellCommandDouble *ShellCommandDouble) Start() error {
+	if shellCommandDouble.started {
+		return errors.New("shell command already started")
+	}
+
 	shellCommandDouble.started = true
 	shellCommandDouble.errorChannel = make(chan error)
 	shellCommandDouble.exitCodeChannel = make(chan int)

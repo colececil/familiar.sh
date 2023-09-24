@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"regexp"
+	"strings"
 	"sync"
 )
 
@@ -112,7 +113,8 @@ func defaultRunShellCommandFunc(createShellCommand CreateShellCommandFunc, outpu
 	}
 
 	if exitCode := command.ExitCode(); exitCode != 0 {
-		return "", fmt.Errorf("error running command \"%s %s\", with exit code %d", program, args, exitCode)
+		return "", fmt.Errorf("error running command \"%s %s\", with exit code %d", program, strings.Join(args, " "),
+			exitCode)
 	}
 
 	return result, nil

@@ -1,13 +1,17 @@
 package system_test
 
 import (
+	"bufio"
 	"bytes"
+	"errors"
+	"fmt"
 	. "github.com/colececil/familiar.sh/internal/system"
 	"github.com/colececil/familiar.sh/internal/test"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"io"
 	"regexp"
+	"strings"
 	"time"
 )
 
@@ -33,7 +37,17 @@ the program's error output
 			}
 			return NewRealShellCommand("")
 		}
+
+		shellCommandDouble = test.NewShellCommandDouble(
+			func(stdoutWriter io.Writer, stderrWriter io.Writer, errorChannel chan<- error,
+				exitCodeChannel chan<- int) {
+
+				exitCodeChannel <- programExitCode
+			},
+		)
+
 		outputWriterDouble = new(bytes.Buffer)
+
 		shellCommandService = NewShellCommandService(
 			createShellCommandFuncDouble,
 			NewRunShellCommandFunc(),
@@ -166,7 +180,7 @@ the program's error output
 		var regex *regexp.Regexp
 
 		BeforeEach(func() {
-			output = "Line 1\nLine 2\nLine 3\nThe result is 123\n"
+			output = "Line 1\nLine 2\nLine 3\nThe result is 123\nThe result is 234\\n"
 			regex, _ = regexp.Compile("The result is (\\d+)")
 		})
 
@@ -281,23 +295,99 @@ the program's error output
 	})
 
 	It("should return an error if the command fails to start", func() {
+		_ = shellCommandDouble.Start()
+
+		_, err := shellCommandService.RunShellCommand(expectedProgram, false, nil, expectedProgramArg)
+
+		Expect(err).ToNot(BeNil())
+		Expect(err.Error()).To(Equal("shell command already started"))
 	})
 
 	It("should return an error if the command fails to return its stdout pipe", func() {
+		_, _ = shellCommandDouble.StdoutPipe()
+
+		_, err := shellCommandService.RunShellCommand(expectedProgram, false, nil, expectedProgramArg)
+
+		Expect(err).ToNot(BeNil())
+		Expect(err.Error()).To(Equal("stdout already set"))
 	})
 
 	It("should return an error if the command fails to return its stderr pipe", func() {
+		_, _ = shellCommandDouble.StderrPipe()
+
+		_, err := shellCommandService.RunShellCommand(expectedProgram, false, nil, expectedProgramArg)
+
+		Expect(err).ToNot(BeNil())
+		Expect(err.Error()).To(Equal("stderr already set"))
 	})
 
 	It("should return an error if the command returns a non-zero exit code", func() {
+		expectedExitCode := 3
+		expectedErrorString := fmt.Sprintf("error running command \"%s %s\", with exit code %d", expectedProgram,
+			expectedProgramArg, expectedExitCode)
+
+		shellCommandDouble = test.NewShellCommandDouble(
+			func(stdoutWriter io.Writer, stderrWriter io.Writer, errorChannel chan<- error,
+				exitCodeChannel chan<- int) {
+
+				exitCodeChannel <- expectedExitCode
+			},
+		)
+
+		_, err := shellCommandService.RunShellCommand(expectedProgram, false, nil, expectedProgramArg)
+
+		Expect(err).ToNot(BeNil())
+		Expect(err.Error()).To(Equal(expectedErrorString))
 	})
 
 	It("should return an error if the command fails to run", func() {
+		expectedError := errors.New("command failed")
+
+		shellCommandDouble = test.NewShellCommandDouble(
+			func(stdoutWriter io.Writer, stderrWriter io.Writer, errorChannel chan<- error,
+				exitCodeChannel chan<- int) {
+
+				errorChannel <- expectedError
+			},
+		)
+
+		_, err := shellCommandService.RunShellCommand(expectedProgram, false, nil, expectedProgramArg)
+
+		Expect(err).ToNot(BeNil())
+		Expect(err).To(Equal(expectedError))
 	})
 
 	It("should return an error if there is an issue reading the stdout command output", func() {
+		shellCommandDouble = test.NewShellCommandDouble(
+			func(stdoutWriter io.Writer, stderrWriter io.Writer, errorChannel chan<- error,
+				exitCodeChannel chan<- int) {
+
+				lineThatOverflowsBuffer := strings.Repeat("1", bufio.MaxScanTokenSize+1)
+				_, _ = stdoutWriter.Write([]byte(lineThatOverflowsBuffer))
+				exitCodeChannel <- programExitCode
+			},
+		)
+
+		_, err := shellCommandService.RunShellCommand(expectedProgram, false, nil, expectedProgramArg)
+
+		Expect(err).ToNot(BeNil())
+		Expect(err.Error()).To(Equal("bufio.Scanner: token too long"))
 	})
 
 	It("should return an error if there is an issue reading the stderr command output", func() {
+		shellCommandDouble = test.NewShellCommandDouble(
+			func(stdoutWriter io.Writer, stderrWriter io.Writer, errorChannel chan<- error,
+				exitCodeChannel chan<- int) {
+
+				lineThatOverflowsBuffer := strings.Repeat("1", bufio.MaxScanTokenSize+1)
+				_, _ = stderrWriter.Write([]byte(lineThatOverflowsBuffer))
+				exitCodeChannel <- programExitCode
+			},
+		)
+
+		_, err := shellCommandService.RunShellCommand(expectedProgram, false, nil, expectedProgramArg)
+
+		Expect(err).ToNot(BeNil())
+		Expect(err.Error()).To(Equal("bufio.Scanner: token too long"))
 	})
 })
