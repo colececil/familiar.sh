@@ -22,14 +22,14 @@ var _ = Describe("PackageManagerRegistry", func() {
 		packageManager2 = test.NewPackageManagerDouble(packageManager2Name)
 		packageManager3 = test.NewPackageManagerDouble(packageManager3Name)
 		packageManagerRegistry = NewPackageManagerRegistry([]PackageManager{
-			packageManager1,
-			packageManager2,
 			packageManager3,
+			packageManager2,
+			packageManager1,
 		})
 	})
 
 	Describe("GetAllPackageManagers", func() {
-		It("should return a slice containing all package managers", func() {
+		It("should return a slice containing all package managers in alphabetical order", func() {
 			result := packageManagerRegistry.GetAllPackageManagers()
 			Expect(len(result)).To(Equal(3))
 			Expect(result[0]).To(Equal(packageManager1))

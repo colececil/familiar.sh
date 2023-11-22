@@ -2,6 +2,8 @@ package packagemanagers
 
 import (
 	"fmt"
+	"slices"
+	"strings"
 )
 
 type PackageManagerRegistry map[string]PackageManager
@@ -21,6 +23,12 @@ func (packageManagerRegistry PackageManagerRegistry) GetAllPackageManagers() []P
 	for _, packageManager := range packageManagerRegistry {
 		packageManagersSlice = append(packageManagersSlice, packageManager)
 	}
+	slices.SortFunc(packageManagersSlice, func(packageManager1, packageManager2 PackageManager) int {
+		return strings.Compare(
+			strings.ToLower(packageManager1.Name()),
+			strings.ToLower(packageManager2.Name()),
+		)
+	})
 	return packageManagersSlice
 }
 
