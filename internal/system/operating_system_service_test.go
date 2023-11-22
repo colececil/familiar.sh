@@ -1,6 +1,7 @@
-package system
+package system_test
 
 import (
+	. "github.com/colececil/familiar.sh/internal/system"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
