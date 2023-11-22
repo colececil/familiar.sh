@@ -6,7 +6,7 @@ import (
 	"github.com/colececil/familiar.sh/internal/system"
 	"io"
 	"regexp"
-	"sort"
+	"slices"
 	"strings"
 )
 
@@ -191,8 +191,11 @@ func (scoopPackageManager *ScoopPackageManager) InstalledPackages() ([]*Package,
 	for _, installedPackage := range installedPackages {
 		installedPackagesSlice = append(installedPackagesSlice, installedPackage)
 	}
-	sort.Slice(installedPackagesSlice, func(i, j int) bool {
-		return installedPackagesSlice[i].Name < installedPackagesSlice[j].Name
+	slices.SortFunc(installedPackagesSlice, func(package1, package2 *Package) int {
+		return strings.Compare(
+			strings.ToLower(package1.Name),
+			strings.ToLower(package2.Name),
+		)
 	})
 
 	return installedPackagesSlice, nil
