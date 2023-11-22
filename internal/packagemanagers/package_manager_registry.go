@@ -7,10 +7,12 @@ import (
 type PackageManagerRegistry map[string]PackageManager
 
 // NewPackageManagerRegistry returns a new instance of PackageManagerRegistry.
-func NewPackageManagerRegistry(scoopPackageManager *ScoopPackageManager) PackageManagerRegistry {
-	return PackageManagerRegistry{
-		scoopPackageManager.Name(): scoopPackageManager,
+func NewPackageManagerRegistry(packageManagers []PackageManager) PackageManagerRegistry {
+	packageManagerRegistry := make(map[string]PackageManager)
+	for _, packageManager := range packageManagers {
+		packageManagerRegistry[packageManager.Name()] = packageManager
 	}
+	return packageManagerRegistry
 }
 
 // GetAllPackageManagers returns a slice containing all package managers.

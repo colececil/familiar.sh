@@ -19,6 +19,7 @@ const projectVersion = "0.0.0"
 var providers = wire.NewSet(
 	getFamiliarVersion,
 	getCurrentOperatingSystem,
+	getPackageManagers,
 	getOutputWriter,
 	commands.NewCommandRegistry,
 	commands.NewVersionCommand,
@@ -45,6 +46,11 @@ func InitializeCommandRegistry() commands.CommandRegistry {
 func getFamiliarVersion() commands.FamiliarVersionString {
 	version := commands.FamiliarVersionString(projectVersion)
 	return version
+}
+
+// getPackageManagers returns a slice containing all package managers.
+func getPackageManagers(scoopPackageManager *packagemanagers.ScoopPackageManager) []packagemanagers.PackageManager {
+	return []packagemanagers.PackageManager{scoopPackageManager}
 }
 
 // getCurrentOperatingSystem returns the current operating system.
