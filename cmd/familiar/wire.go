@@ -10,6 +10,7 @@ import (
 	"github.com/google/wire"
 	"io"
 	"os"
+	"runtime"
 )
 
 // This value is overridden at build time using `-ldflags`.
@@ -17,6 +18,7 @@ const projectVersion = "0.0.0"
 
 var providers = wire.NewSet(
 	getFamiliarVersion,
+	getCurrentOperatingSystem,
 	getOutputWriter,
 	commands.NewCommandRegistry,
 	commands.NewVersionCommand,
@@ -27,7 +29,6 @@ var providers = wire.NewSet(
 	config.NewConfigService,
 	packagemanagers.NewPackageManagerRegistry,
 	packagemanagers.NewScoopPackageManager,
-	system.NewIsWindowsFunc,
 	system.NewOperatingSystemService,
 	system.NewCreateShellCommandFunc,
 	system.NewRunShellCommandFunc,
@@ -44,6 +45,11 @@ func InitializeCommandRegistry() commands.CommandRegistry {
 func getFamiliarVersion() commands.FamiliarVersionString {
 	version := commands.FamiliarVersionString(projectVersion)
 	return version
+}
+
+// getCurrentOperatingSystem returns the current operating system.
+func getCurrentOperatingSystem() system.OperatingSystem {
+	return system.OperatingSystem(runtime.GOOS)
 }
 
 // getOutputWriter returns the output writer.

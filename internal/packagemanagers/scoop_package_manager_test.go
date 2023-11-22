@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	. "github.com/colececil/familiar.sh/internal/packagemanagers"
+	"github.com/colececil/familiar.sh/internal/system"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"strings"
@@ -13,16 +14,16 @@ import (
 )
 
 var _ = Describe("ScoopPackageManager", func() {
-	var operatingSystemServiceDouble *test.OperatingSystemServiceDouble
+	var operatingSystemService *system.OperatingSystemService
 	var shellCommandServiceDouble *test.ShellCommandServiceDouble
 	var outputWriterDouble *bytes.Buffer
 	var scoopPackageManager *ScoopPackageManager
 
 	BeforeEach(func() {
-		operatingSystemServiceDouble = test.NewOperatingSystemServiceDouble()
+		operatingSystemService = system.NewOperatingSystemService(system.WindowsOperatingSystem)
 		shellCommandServiceDouble = test.NewShellCommandServiceDouble()
 		outputWriterDouble = new(bytes.Buffer)
-		scoopPackageManager = NewScoopPackageManager(operatingSystemServiceDouble.OperatingSystemService,
+		scoopPackageManager = NewScoopPackageManager(operatingSystemService,
 			shellCommandServiceDouble.ShellCommandService, outputWriterDouble)
 	})
 
@@ -35,13 +36,22 @@ var _ = Describe("ScoopPackageManager", func() {
 
 	Describe("IsSupported", func() {
 		It("should return true if running on Windows", func() {
-			operatingSystemServiceDouble.SetIsWindows(true)
 			result := scoopPackageManager.IsSupported()
 			Expect(result).To(BeTrue())
 		})
 
-		It("should return false if not running on Windows", func() {
-			operatingSystemServiceDouble.SetIsWindows(false)
+		It("should return false if running on macOS", func() {
+			operatingSystemService = system.NewOperatingSystemService(system.MacOsOperatingSystem)
+			scoopPackageManager = NewScoopPackageManager(operatingSystemService,
+				shellCommandServiceDouble.ShellCommandService, outputWriterDouble)
+			result := scoopPackageManager.IsSupported()
+			Expect(result).To(BeFalse())
+		})
+
+		It("should return false if running on Linux", func() {
+			operatingSystemService = system.NewOperatingSystemService(system.LinuxOperatingSystem)
+			scoopPackageManager = NewScoopPackageManager(operatingSystemService,
+				shellCommandServiceDouble.ShellCommandService, outputWriterDouble)
 			result := scoopPackageManager.IsSupported()
 			Expect(result).To(BeFalse())
 		})
