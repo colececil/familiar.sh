@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/colececil/familiar.sh/internal/packagemanagers"
 	"gopkg.in/yaml.v3"
+	"slices"
 	"strings"
 )
 
@@ -91,6 +92,12 @@ func (config *Config) AddPackageManager(packageManagerName string, packageManage
 		Packages: []ConfiguredPackage{},
 	}
 	config.PackageManagers = append(config.PackageManagers, packageManager)
+	slices.SortFunc(config.PackageManagers, func(packageManager1, packageManager2 ConfiguredPackageManager) int {
+		return strings.Compare(
+			strings.ToLower(packageManager1.Name),
+			strings.ToLower(packageManager2.Name),
+		)
+	})
 	return nil
 }
 
@@ -127,6 +134,7 @@ func (config *Config) RemovePackageManager(packageManagerName string) error {
 //   - packageVersion: The version of the package to add.
 func (config *Config) AddPackage(packageManagerName string, packageName string,
 	packageVersion *packagemanagers.Version) error {
+
 	var matchingPackageManager *ConfiguredPackageManager
 	for i := range config.PackageManagers {
 		if config.PackageManagers[i].Name == packageManagerName {
@@ -147,6 +155,12 @@ func (config *Config) AddPackage(packageManagerName string, packageName string,
 
 	newPackage := ConfiguredPackage{Name: packageName, Version: packageVersion.VersionString}
 	matchingPackageManager.Packages = append(matchingPackageManager.Packages, newPackage)
+	slices.SortFunc(matchingPackageManager.Packages, func(package1, package2 ConfiguredPackage) int {
+		return strings.Compare(
+			strings.ToLower(package1.Name),
+			strings.ToLower(package2.Name),
+		)
+	})
 	return nil
 }
 
