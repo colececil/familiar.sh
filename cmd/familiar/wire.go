@@ -31,7 +31,7 @@ var providers = wire.NewSet(
 	packagemanagers.NewPackageManagerRegistry,
 	packagemanagers.NewScoopPackageManager,
 	system.NewOperatingSystemService,
-	getFileSystemService,
+	system.NewFileSystemService,
 	system.NewCreateShellCommandFunc,
 	system.NewRunShellCommandFunc,
 	system.NewShellCommandService,
@@ -41,10 +41,6 @@ var providers = wire.NewSet(
 func InitializeCommandRegistry() commands.CommandRegistry {
 	wire.Build(providers)
 	return commands.CommandRegistry{}
-}
-
-func getFileSystemService() system.FileSystemService {
-	return system.NewConcreteFileSystemService()
 }
 
 // getFamiliarVersion returns the version of Familiar.sh.

@@ -13,27 +13,27 @@ type FileSystemService interface {
 	CreateFile(path string) (*os.File, error)
 }
 
-type ConcreteFileSystemService struct {
+// NewFileSystemService creates a new instance of FileSystemService.
+func NewFileSystemService() FileSystemService {
+	return &fileSystemService{}
 }
 
-// NewConcreteFileSystemService creates a new instance of ConcreteFileSystemService.
-func NewConcreteFileSystemService() *ConcreteFileSystemService {
-	return &ConcreteFileSystemService{}
+type fileSystemService struct {
 }
 
 // GetXdgConfigHome returns the config home directory, according to the XDG specification.
-func (fileSystemService *ConcreteFileSystemService) GetXdgConfigHome() string {
+func (fileSystemService *fileSystemService) GetXdgConfigHome() string {
 	return xdg.ConfigHome
 }
 
 // CreateDirectory creates the directory at the given path, along with any required parent directories. All directories
 // created will have the given permissions. If the directory already exists, nothing happens.
-func (fileSystemService *ConcreteFileSystemService) CreateDirectory(path string, permissions os.FileMode) error {
+func (fileSystemService *fileSystemService) CreateDirectory(path string, permissions os.FileMode) error {
 	return os.MkdirAll(path, permissions)
 }
 
 // FileExists returns whether the file at the given path exists.
-func (fileSystemService *ConcreteFileSystemService) FileExists(path string) (bool, error) {
+func (fileSystemService *fileSystemService) FileExists(path string) (bool, error) {
 	if _, err := os.Stat(path); err != nil {
 		if os.IsNotExist(err) {
 			return false, nil
@@ -44,11 +44,11 @@ func (fileSystemService *ConcreteFileSystemService) FileExists(path string) (boo
 }
 
 // ReadFile reads the file at the given path.
-func (fileSystemService *ConcreteFileSystemService) ReadFile(path string) ([]byte, error) {
+func (fileSystemService *fileSystemService) ReadFile(path string) ([]byte, error) {
 	return os.ReadFile(path)
 }
 
 // CreateFile creates a file at the given path. If the file already exists, it is overwritten.
-func (fileSystemService *ConcreteFileSystemService) CreateFile(path string) (*os.File, error) {
+func (fileSystemService *fileSystemService) CreateFile(path string) (*os.File, error) {
 	return os.Create(path)
 }
