@@ -2,7 +2,7 @@ package config
 
 import (
 	"fmt"
-	"github.com/adrg/xdg"
+	"github.com/colececil/familiar.sh/internal/system"
 	"gopkg.in/yaml.v3"
 	"os"
 	"path/filepath"
@@ -16,20 +16,23 @@ const configLocationNotSetError = "The location of Familiar's shared config file
 
 // ConfigService is a service that manages the shared configuration file.
 type ConfigService struct {
+	fileSystemService system.FileSystemService
 }
 
 // NewConfigService creates a new instance of ConfigService.
-func NewConfigService() *ConfigService {
-	return &ConfigService{}
+func NewConfigService(fileSystemService system.FileSystemService) *ConfigService {
+	return &ConfigService{
+		fileSystemService: fileSystemService,
+	}
 }
 
 // GetConfigLocation returns the location of the shared configuration file, as stored in the "config_location" file in
 // the XDG config directory. If the "config_location" file does not exist or is empty, an empty string is returned.
 func (configService *ConfigService) GetConfigLocation() (string, error) {
-	configDir := xdg.ConfigHome
+	configDir := configService.fileSystemService.GetXdgConfigHome()
 
 	configLocationFilePath := configDir + "/" + appDirectoryName + "/" + configLocationFileName
-	bytes, err := os.ReadFile(configLocationFilePath)
+	bytes, err := configService.fileSystemService.ReadFile(configLocationFilePath)
 	if err != nil {
 		return "", fmt.Errorf(configLocationNotSetError)
 	}
@@ -52,24 +55,25 @@ func (configService *ConfigService) SetConfigLocation(path string) error {
 		return fmt.Errorf("invalid file extension '%s': expected '.yml' or '.yaml'", ext)
 	}
 
-	dir := filepath.Dir(absolutePath)
-	if _, err := os.Stat(dir); err != nil {
-		if os.IsNotExist(err) {
-			return fmt.Errorf("directory '%s' does not exist", dir)
-		}
-		return fmt.Errorf("error checking directory '%s': %w", dir, err)
+	dirPath := filepath.Dir(absolutePath)
+	directoryExists, err := configService.fileSystemService.FileExists(dirPath)
+	if err != nil {
+		return fmt.Errorf("error checking directory '%s': %w", dirPath, err)
+	}
+	if !directoryExists {
+		return fmt.Errorf("directory '%s' does not exist", dirPath)
 	}
 
-	configDir := xdg.ConfigHome
+	configDir := configService.fileSystemService.GetXdgConfigHome()
 
 	configLocationFilePath := configDir + "/" + appDirectoryName + "/" + configLocationFileName
 
-	err = os.MkdirAll(configDir+"/"+appDirectoryName, 0700)
+	err = configService.fileSystemService.CreateDirectory(configDir+"/"+appDirectoryName, 0660)
 	if err != nil {
 		return err
 	}
 
-	file, err := os.Create(configLocationFilePath)
+	file, err := configService.fileSystemService.CreateFile(configLocationFilePath)
 	if err != nil {
 		return err
 	}
@@ -91,7 +95,7 @@ func (configService *ConfigService) GetConfig() (*Config, error) {
 		return nil, err
 	}
 
-	bytes, err := os.ReadFile(configLocation)
+	bytes, err := configService.fileSystemService.ReadFile(configLocation)
 	if err != nil {
 		if os.IsNotExist(err) {
 			newConfig := NewConfig()
@@ -121,7 +125,7 @@ func (configService *ConfigService) SetConfig(config *Config) error {
 		return err
 	}
 
-	file, err := os.Create(configLocation)
+	file, err := configService.fileSystemService.CreateFile(configLocation)
 	if err != nil {
 		return err
 	}
