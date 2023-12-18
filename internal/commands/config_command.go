@@ -62,7 +62,7 @@ func (configCommand *ConfigCommand) Execute(args []string) error {
 	case "location":
 		if len(args) == 1 {
 			location, err := configCommand.configService.GetConfigLocation()
-			if len(location) > 0 {
+			if err == nil {
 				fmt.Println(location)
 			}
 			return err

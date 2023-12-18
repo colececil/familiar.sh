@@ -27,7 +27,7 @@ func NewConfigService(fileSystemService system.FileSystemService) *ConfigService
 }
 
 // GetConfigLocation returns the location of the shared configuration file, as stored in the "config_location" file in
-// the XDG config directory. If the "config_location" file does not exist or is empty, an empty string is returned.
+// Familiar's XDG config directory. If the "config_location" file does not exist or is empty, an error is returned.
 func (service *ConfigService) GetConfigLocation() (string, error) {
 	configDir := service.fileSystemService.GetXdgConfigHome()
 
@@ -38,12 +38,19 @@ func (service *ConfigService) GetConfigLocation() (string, error) {
 	}
 
 	path := strings.TrimSpace(string(bytes))
+	if len(path) == 0 {
+		return "", fmt.Errorf(configLocationNotSetError)
+	}
+
 	return path, nil
 }
 
-// SetConfigLocation writes the given path to the "config_location" file in the XDG config directory. If the
-// directory of the file specified by the given path does not exist, or if the file is not a YAML file, an error is
-// returned.
+// SetConfigLocation writes the given path to the "config_location" file in Familiar's XDG config directory. If the
+// Familiar XDG config directory or the "config_location" file do not exist, they will be created. If the
+// "config_location" file already exists, it will be overwritten.
+//
+// If the directory of the file specified by the given path does not exist, or if the file specified by the path does
+// not have a YAML file extension, an error is returned.
 func (service *ConfigService) SetConfigLocation(path string) error {
 	absolutePath, err := filepath.Abs(path)
 	if err != nil {
@@ -88,7 +95,11 @@ func (service *ConfigService) SetConfigLocation(path string) error {
 	return err
 }
 
-// GetConfig returns the contents of the config file as a pointer to a Config struct.
+// GetConfig returns the contents of the config file as a pointer to a Config struct. If the config file does not yet
+// exist, a new Config struct is created and written to the file before being returned.
+//
+// An error is returned if the config file location is not set, or if there is an issue unmarshalling the config file
+// to a Config struct.
 func (service *ConfigService) GetConfig() (*Config, error) {
 	configLocation, err := service.GetConfigLocation()
 	if err != nil {
@@ -115,10 +126,8 @@ func (service *ConfigService) GetConfig() (*Config, error) {
 	return &config, nil
 }
 
-// SetConfig writes the given configuration to the config file as YAML.
-//
-// It takes the following parameters:
-//   - config: The configuration to write to the file.
+// SetConfig writes the given configuration to the config file as YAML. An error is returned if the config file location
+// is not set, or if there is an issue creating or updating the config file.
 func (service *ConfigService) SetConfig(config *Config) error {
 	configLocation, err := service.GetConfigLocation()
 	if err != nil {

@@ -22,7 +22,7 @@ func (double *FileSystemServiceDouble) SetXdgConfigHome(xdgConfigHome string) {
 	double.xdgConfigHome = xdgConfigHome
 }
 
-// SetFileContentForExpectedPath sets the file content to return for the given path.
+// SetFileContentForExpectedPath sets the file content to return when calling ReadFile with the given path.
 func (double *FileSystemServiceDouble) SetFileContentForExpectedPath(path string, content string) {
 	double.expectedFilePaths[path] = content
 }

@@ -1,7 +1,9 @@
 package system
 
 import (
+	"errors"
 	"github.com/adrg/xdg"
+	"io/fs"
 	"os"
 )
 
@@ -35,7 +37,7 @@ func (service *fileSystemService) CreateDirectory(path string, permissions os.Fi
 // FileExists returns whether the file at the given path exists.
 func (service *fileSystemService) FileExists(path string) (bool, error) {
 	if _, err := os.Stat(path); err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, fs.ErrNotExist) {
 			return false, nil
 		}
 		return false, err
