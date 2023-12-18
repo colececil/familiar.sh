@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/colececil/familiar.sh/internal/system"
 	"gopkg.in/yaml.v3"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -84,8 +85,8 @@ func (service *ConfigService) SetConfigLocation(path string) error {
 	if err != nil {
 		return err
 	}
-	defer func(file *os.File) {
-		_ = file.Close()
+	defer func(closer io.Closer) {
+		_ = closer.Close()
 	}(file)
 
 	_, err = fmt.Fprintln(file, absolutePath)
@@ -138,8 +139,8 @@ func (service *ConfigService) SetConfig(config *Config) error {
 	if err != nil {
 		return err
 	}
-	defer func(file *os.File) {
-		_ = file.Close()
+	defer func(closer io.Closer) {
+		_ = closer.Close()
 	}(file)
 
 	encoder := yaml.NewEncoder(file)

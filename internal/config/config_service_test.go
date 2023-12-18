@@ -6,13 +6,14 @@ import (
 	"github.com/colececil/familiar.sh/internal/test"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"path/filepath"
 )
 
 var _ = Describe("ConfigService", func() {
 	const configHomeLocation = "/home/user/.config"
 	const appDirectoryName = "io.colececil.familiar"
 	const configLocationFileName = "config_location"
-	const configLocation = "/path/to/config"
+	const configLocation = "/path/to/config.yml"
 
 	var fileSystemServiceDouble *test.FileSystemServiceDouble
 	var configService *config.ConfigService
@@ -62,31 +63,57 @@ var _ = Describe("ConfigService", func() {
 	})
 
 	Describe("SetConfigLocation", func() {
-		It("should write the given path to the config location file", func() {
+		When("the config location file exists", func() {
+			BeforeEach(func() {
+				fileSystemServiceDouble.SetFileContentForExpectedPath(
+					configHomeLocation+"/"+appDirectoryName+"/"+configLocationFileName,
+					"",
+				)
+			})
+
+			It("should write the given path to the config location file", func() {
+				expectedFileContent, _ := filepath.Abs(configLocation)
+				expectedFileContent += "\n"
+
+				err := configService.SetConfigLocation(configLocation)
+				files := fileSystemServiceDouble.GetCreatedFiles()
+
+				Expect(err).To(BeNil())
+				Expect(len(files)).To(Equal(1))
+				Expect(files[0].GetPath()).To(Equal(
+					configHomeLocation + "/" + appDirectoryName + "/" + configLocationFileName,
+				))
+				Expect(files[0].GetContent()).To(Equal(expectedFileContent))
+			})
+
+			It("should close the config location file after writing to it", func() {
+			})
+
+			It("should return an error if the directory of the file specified by the given path does not exist", func() {
+			})
+
+			It("should return an error if the file specified by the path does not have a YAML file extension", func() {
+			})
+
+			It("should return an error if there is an issue checking if the directory exists", func() {
+			})
+
+			It("should return an error if there is an issue updating the config location file", func() {
+			})
 		})
 
-		It("should create the config location file if it does not exist", func() {
-		})
+		When("the config location file does not exist", func() {
+			It("should create the config location file", func() {
+			})
 
-		It("should create Familiar's XDG config directory if it does not exist", func() {
-		})
+			It("should create Familiar's XDG config directory if it does not exist", func() {
+			})
 
-		It("should close the config location file after writing to it", func() {
-		})
+			It("should return an error if there is an issue creating Familiar's XDG config directory", func() {
+			})
 
-		It("should return an error if the directory of the file specified by the given path does not exist", func() {
-		})
-
-		It("should return an error if the file specified by the path does not have a YAML file extension", func() {
-		})
-
-		It("should return an error if there is an issue checking if the directory exists", func() {
-		})
-
-		It("should return an error if there is an issue creating Familiar's XDG config directory", func() {
-		})
-
-		It("should return an error if there is an issue creating or updating the config location file", func() {
+			It("should return an error if there is an issue creating the config location file", func() {
+			})
 		})
 	})
 
