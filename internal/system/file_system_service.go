@@ -6,12 +6,22 @@ import (
 	"io"
 	"io/fs"
 	"os"
+	"path/filepath"
 )
 
 // FileSystemService is an interface for a service that provides file system operations.
 type FileSystemService interface {
 	// GetXdgConfigHome returns the config home directory, according to the XDG specification.
 	GetXdgConfigHome() string
+
+	// Abs returns the absolute representation of the given path.
+	Abs(path string) (string, error)
+
+	// Dir returns the directory of the given path.
+	Dir(path string) string
+
+	// Ext returns the file extension of the given path. If the path has no extension, an empty string is returned.
+	Ext(path string) string
 
 	// CreateDirectory creates the directory at the given path, along with any required parent directories. All directories
 	// created will have the given permissions. If the directory already exists, nothing happens.
@@ -38,6 +48,21 @@ type fileSystemService struct {
 // GetXdgConfigHome is a concrete implementation of FileSystemService.GetXdgConfigHome.
 func (service *fileSystemService) GetXdgConfigHome() string {
 	return xdg.ConfigHome
+}
+
+// Abs is a concrete implementation of FileSystemService.Abs.
+func (service *fileSystemService) Abs(path string) (string, error) {
+	return filepath.Abs(path)
+}
+
+// Dir is a concrete implementation of FileSystemService.Dir.
+func (service *fileSystemService) Dir(path string) string {
+	return filepath.Dir(path)
+}
+
+// Ext is a concrete implementation of FileSystemService.Ext.
+func (service *fileSystemService) Ext(path string) string {
+	return filepath.Ext(path)
 }
 
 // CreateDirectory is a concrete implementation of FileSystemService.CreateDirectory.

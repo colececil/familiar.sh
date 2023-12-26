@@ -1,12 +1,13 @@
 package config_test
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/colececil/familiar.sh/internal/config"
 	"github.com/colececil/familiar.sh/internal/test"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"path/filepath"
+	"strings"
 )
 
 var _ = Describe("ConfigService", func() {
@@ -16,20 +17,22 @@ var _ = Describe("ConfigService", func() {
 	const configLocation = "/path/to/config.yml"
 
 	var fileSystemServiceDouble *test.FileSystemServiceDouble
+	var outputWriterDouble *bytes.Buffer
 	var configService *config.ConfigService
 
 	BeforeEach(func() {
 		fileSystemServiceDouble = test.NewFileSystemServiceDouble()
 		fileSystemServiceDouble.SetXdgConfigHome(configHomeLocation)
-		configService = config.NewConfigService(fileSystemServiceDouble)
+		outputWriterDouble = new(bytes.Buffer)
+		configService = config.NewConfigService(fileSystemServiceDouble, outputWriterDouble)
 	})
 
 	Describe("GetConfigLocation", func() {
 		It("should return the config location defined in the config location file", func() {
-			fileSystemServiceDouble.SetFileContentForExpectedPath(
-				configHomeLocation+"/"+appDirectoryName+"/"+configLocationFileName,
-				configLocation,
-			)
+			file, _ := fileSystemServiceDouble.CreateFile(configHomeLocation + "/" + appDirectoryName + "/" +
+				configLocationFileName)
+			_, _ = file.Write([]byte(configLocation))
+			_ = file.Close()
 
 			location, err := configService.GetConfigLocation()
 
@@ -50,10 +53,9 @@ var _ = Describe("ConfigService", func() {
 		It("should return an error if the config location file is empty", func() {
 			expectedError := fmt.Errorf("The location of Familiar's shared config file has not yet been set. Please " +
 				"set it using \"familiar config location <path>\", for more details, execute \"familiar help config\".")
-			fileSystemServiceDouble.SetFileContentForExpectedPath(
-				configHomeLocation+"/"+appDirectoryName+"/"+configLocationFileName,
-				"",
-			)
+			file, _ := fileSystemServiceDouble.CreateFile(configHomeLocation + "/" + appDirectoryName + "/" +
+				configLocationFileName)
+			_ = file.Close()
 
 			location, err := configService.GetConfigLocation()
 
@@ -64,35 +66,58 @@ var _ = Describe("ConfigService", func() {
 
 	Describe("SetConfigLocation", func() {
 		When("the config location file exists", func() {
+			var expectedFileContent string
+
 			BeforeEach(func() {
-				fileSystemServiceDouble.SetFileContentForExpectedPath(
-					configHomeLocation+"/"+appDirectoryName+"/"+configLocationFileName,
-					"",
-				)
+				file, _ := fileSystemServiceDouble.CreateFile(configHomeLocation + "/" + appDirectoryName + "/" +
+					configLocationFileName)
+				_ = file.Close()
+
+				configFileDir := fileSystemServiceDouble.Dir(configLocation)
+				file, _ = fileSystemServiceDouble.CreateFile(configFileDir)
+				_ = file.Close()
+
+				expectedFileContent, _ = fileSystemServiceDouble.Abs(configLocation)
+				expectedFileContent += "\n"
 			})
 
 			It("should write the given path to the config location file", func() {
-				expectedFileContent, _ := filepath.Abs(configLocation)
-				expectedFileContent += "\n"
-
 				err := configService.SetConfigLocation(configLocation)
-				files := fileSystemServiceDouble.GetCreatedFiles()
+				fileContentBytes, _ := fileSystemServiceDouble.ReadFile(configHomeLocation + "/" +
+					appDirectoryName + "/" + configLocationFileName)
+				fileContent := string(fileContentBytes)
 
 				Expect(err).To(BeNil())
-				Expect(len(files)).To(Equal(1))
-				Expect(files[0].GetPath()).To(Equal(
-					configHomeLocation + "/" + appDirectoryName + "/" + configLocationFileName,
-				))
-				Expect(files[0].GetContent()).To(Equal(expectedFileContent))
+				Expect(fileContent).To(Equal(expectedFileContent))
+			})
+
+			It("should write output stating that the config location has been set", func() {
+				err := configService.SetConfigLocation(configLocation)
+				Expect(err).To(BeNil())
+				Expect(outputWriterDouble.String()).To(Equal("The config file location has been set to \"" +
+					configLocation + "\".\n"))
 			})
 
 			It("should close the config location file after writing to it", func() {
+				err := configService.SetConfigLocation(configLocation)
+				file, _ := fileSystemServiceDouble.GetCreatedFile(configHomeLocation + "/" + appDirectoryName + "/" +
+					configLocationFileName)
+
+				Expect(err).To(BeNil())
+				Expect(file.IsClosed()).To(BeTrue())
 			})
 
 			It("should return an error if the directory of the file specified by the given path does not exist", func() {
+				dir := "/other/dir/to"
+				err := configService.SetConfigLocation(dir + "/config.yml")
+				Expect(err.Error()).To(Equal(fmt.Sprintf("directory \"%s\" does not exist", dir)))
 			})
 
 			It("should return an error if the file specified by the path does not have a YAML file extension", func() {
+				path := strings.TrimSuffix(configLocation, ".yml")
+				err := configService.SetConfigLocation(path)
+				Expect(err.Error()).To(Equal(fmt.Sprintf(
+					"invalid file extension \"\": expected \".yml\" or \".yaml\"")))
 			})
 
 			It("should return an error if there is an issue checking if the directory exists", func() {

@@ -6,7 +6,6 @@ import (
 	"gopkg.in/yaml.v3"
 	"io"
 	"os"
-	"path/filepath"
 	"strings"
 )
 
@@ -18,12 +17,14 @@ const configLocationNotSetError = "The location of Familiar's shared config file
 // ConfigService is a service that manages the shared configuration file.
 type ConfigService struct {
 	fileSystemService system.FileSystemService
+	outputWriter      io.Writer
 }
 
 // NewConfigService creates a new instance of ConfigService.
-func NewConfigService(fileSystemService system.FileSystemService) *ConfigService {
+func NewConfigService(fileSystemService system.FileSystemService, outputWriter io.Writer) *ConfigService {
 	return &ConfigService{
 		fileSystemService: fileSystemService,
+		outputWriter:      outputWriter,
 	}
 }
 
@@ -53,23 +54,23 @@ func (service *ConfigService) GetConfigLocation() (string, error) {
 // If the directory of the file specified by the given path does not exist, or if the file specified by the path does
 // not have a YAML file extension, an error is returned.
 func (service *ConfigService) SetConfigLocation(path string) error {
-	absolutePath, err := filepath.Abs(path)
+	absolutePath, err := service.fileSystemService.Abs(path)
 	if err != nil {
 		return fmt.Errorf("unable to parse the given path")
 	}
 
-	ext := filepath.Ext(absolutePath)
+	ext := service.fileSystemService.Ext(absolutePath)
 	if ext != ".yml" && ext != ".yaml" {
-		return fmt.Errorf("invalid file extension '%s': expected '.yml' or '.yaml'", ext)
+		return fmt.Errorf("invalid file extension \"%s\": expected \".yml\" or \".yaml\"", ext)
 	}
 
-	dirPath := filepath.Dir(absolutePath)
+	dirPath := service.fileSystemService.Dir(absolutePath)
 	directoryExists, err := service.fileSystemService.FileExists(dirPath)
 	if err != nil {
 		return fmt.Errorf("error checking directory '%s': %w", dirPath, err)
 	}
 	if !directoryExists {
-		return fmt.Errorf("directory '%s' does not exist", dirPath)
+		return fmt.Errorf("directory \"%s\" does not exist", dirPath)
 	}
 
 	configDir := service.fileSystemService.GetXdgConfigHome()
@@ -91,7 +92,7 @@ func (service *ConfigService) SetConfigLocation(path string) error {
 
 	_, err = fmt.Fprintln(file, absolutePath)
 	if err == nil {
-		fmt.Println("The config file location has been set to \"" + absolutePath + "\".")
+		_, err = fmt.Fprintf(service.outputWriter, "The config file location has been set to \"%s\".\n", absolutePath)
 	}
 	return err
 }
