@@ -65,20 +65,22 @@ var _ = Describe("ConfigService", func() {
 	})
 
 	Describe("SetConfigLocation", func() {
-		When("the config location file exists", func() {
-			var expectedFileContent string
+		var expectedFileContent string
 
+		BeforeEach(func() {
+			configFileDir := fileSystemServiceDouble.Dir(configLocation)
+			file, _ := fileSystemServiceDouble.CreateFile(configFileDir)
+			_ = file.Close()
+
+			expectedFileContent, _ = fileSystemServiceDouble.Abs(configLocation)
+			expectedFileContent += "\n"
+		})
+
+		When("the config location file exists", func() {
 			BeforeEach(func() {
 				file, _ := fileSystemServiceDouble.CreateFile(configHomeLocation + "/" + appDirectoryName + "/" +
 					configLocationFileName)
 				_ = file.Close()
-
-				configFileDir := fileSystemServiceDouble.Dir(configLocation)
-				file, _ = fileSystemServiceDouble.CreateFile(configFileDir)
-				_ = file.Close()
-
-				expectedFileContent, _ = fileSystemServiceDouble.Abs(configLocation)
-				expectedFileContent += "\n"
 			})
 
 			It("should write the given path to the config location file", func() {
@@ -120,15 +122,37 @@ var _ = Describe("ConfigService", func() {
 					"invalid file extension \"\": expected \".yml\" or \".yaml\"")))
 			})
 
+			It("should return an error if there is an issue determining the absolute representation of the given path",
+				func() {
+					fileSystemServiceDouble.ReturnErrorFromMethod("Abs", configLocation)
+					err := configService.SetConfigLocation(configLocation)
+					Expect(err.Error()).To(Equal("unable to parse the given path"))
+				})
+
 			It("should return an error if there is an issue checking if the directory exists", func() {
+				dir := fileSystemServiceDouble.Dir(configLocation)
+				fileSystemServiceDouble.ReturnErrorFromMethod("FileExists", dir)
+				err := configService.SetConfigLocation(configLocation)
+				Expect(err.Error()).To(Equal(fmt.Sprintf("error checking existence of directory \"%s\"", dir)))
 			})
 
 			It("should return an error if there is an issue updating the config location file", func() {
+				fileSystemServiceDouble.ReturnErrorFromMethod("CreateFile", configHomeLocation+"/"+appDirectoryName+"/"+
+					configLocationFileName)
+				err := configService.SetConfigLocation(configLocation)
+				Expect(err.Error()).To(Equal("error creating file"))
 			})
 		})
 
 		When("the config location file does not exist", func() {
 			It("should create the config location file", func() {
+				err := configService.SetConfigLocation(configLocation)
+				fileContentBytes, _ := fileSystemServiceDouble.ReadFile(configHomeLocation + "/" +
+					appDirectoryName + "/" + configLocationFileName)
+				fileContent := string(fileContentBytes)
+
+				Expect(err).To(BeNil())
+				Expect(fileContent).To(Equal(expectedFileContent))
 			})
 
 			It("should create Familiar's XDG config directory if it does not exist", func() {

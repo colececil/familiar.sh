@@ -1,6 +1,7 @@
 package test
 
 import (
+	"errors"
 	"fmt"
 	"github.com/colececil/familiar.sh/internal/system"
 	"io"
@@ -12,14 +13,16 @@ import (
 // to be in the Linux format.
 type FileSystemServiceDouble struct {
 	system.FileSystemService
-	xdgConfigHome string
-	createdFiles  map[string]*FileDouble
+	xdgConfigHome       string
+	createdFiles        map[string]*FileDouble
+	errorMethodsAndArgs map[string]string
 }
 
 // NewFileSystemServiceDouble returns a new instance of FileSystemServiceDouble.
 func NewFileSystemServiceDouble() *FileSystemServiceDouble {
 	return &FileSystemServiceDouble{
-		createdFiles: make(map[string]*FileDouble),
+		createdFiles:        make(map[string]*FileDouble),
+		errorMethodsAndArgs: make(map[string]string),
 	}
 }
 
@@ -37,6 +40,9 @@ func (double *FileSystemServiceDouble) GetXdgConfigHome() string {
 // Abs implements system.FileSystemService.Abs by returning the given path if it is absolute, or an error if it is
 // not.
 func (double *FileSystemServiceDouble) Abs(path string) (string, error) {
+	if arg, _ := double.errorMethodsAndArgs["Abs"]; arg == path {
+		return "", errors.New("error getting absolute path")
+	}
 	if !strings.HasPrefix(path, "/") {
 		return "", fmt.Errorf("path \"%s\" is not absolute", path)
 	}
@@ -65,18 +71,19 @@ func (double *FileSystemServiceDouble) Ext(path string) string {
 }
 
 func (double *FileSystemServiceDouble) CreateDirectory(path string, permissions os.FileMode) error {
+	if arg, _ := double.errorMethodsAndArgs["CreateDirectory"]; arg == path {
+		return errors.New("error creating directory")
+	}
 	exists, err := double.FileExists(path)
 	if err != nil {
 		return err
 	}
 	if !exists {
 		file, err := double.CreateFile(path)
-		defer func(closer io.Closer) {
-			_ = closer.Close()
-		}(file)
 		if err != nil {
 			return err
 		}
+		_ = file.Close()
 	}
 	return nil
 }
@@ -84,6 +91,9 @@ func (double *FileSystemServiceDouble) CreateDirectory(path string, permissions 
 // FileExists implements system.FileSystemService.FileExists by checking if the path exists in the createdFiles
 // map.
 func (double *FileSystemServiceDouble) FileExists(path string) (bool, error) {
+	if arg, _ := double.errorMethodsAndArgs["FileExists"]; arg == path {
+		return false, errors.New("error checking if file exists")
+	}
 	_, isPresent := double.createdFiles[path]
 	return isPresent, nil
 }
@@ -91,6 +101,9 @@ func (double *FileSystemServiceDouble) FileExists(path string) (bool, error) {
 // ReadFile implements system.FileSystemService.ReadFile by returning the content of the file at the given path. If the
 // file does not exist, an error is returned.
 func (double *FileSystemServiceDouble) ReadFile(path string) ([]byte, error) {
+	if arg, _ := double.errorMethodsAndArgs["ReadFile"]; arg == path {
+		return nil, errors.New("error reading file")
+	}
 	file, isPresent := double.createdFiles[path]
 	if !isPresent {
 		return nil, fmt.Errorf("file at path \"%s\" does not exist", path)
@@ -104,6 +117,9 @@ func (double *FileSystemServiceDouble) ReadFile(path string) ([]byte, error) {
 // CreateFile implements system.FileSystemService.CreateFile by creating a new FileDouble for the given path and adding
 // it to the createdFiles map.
 func (double *FileSystemServiceDouble) CreateFile(path string) (io.WriteCloser, error) {
+	if arg, _ := double.errorMethodsAndArgs["CreateFile"]; arg == path {
+		return nil, errors.New("error creating file")
+	}
 	file := NewFileDouble(path)
 	double.createdFiles[path] = file
 	return file, nil
@@ -114,4 +130,11 @@ func (double *FileSystemServiceDouble) CreateFile(path string) (io.WriteCloser, 
 func (double *FileSystemServiceDouble) GetCreatedFile(path string) (*FileDouble, bool) {
 	file, isPresent := double.createdFiles[path]
 	return file, isPresent
+}
+
+// ReturnErrorFromMethod tells the FileSystemServiceDouble to return an error any time the given method is called with
+// the given argument. Valid method names are "Abs", "CreateDirectory", "FileExists", "ReadFile", and "CreateFile". If
+// the given method does not take an argument, the argument can be nil or an empty string.
+func (double *FileSystemServiceDouble) ReturnErrorFromMethod(methodName string, arg string) {
+	double.errorMethodsAndArgs[methodName] = arg
 }

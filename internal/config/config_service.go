@@ -67,7 +67,7 @@ func (service *ConfigService) SetConfigLocation(path string) error {
 	dirPath := service.fileSystemService.Dir(absolutePath)
 	directoryExists, err := service.fileSystemService.FileExists(dirPath)
 	if err != nil {
-		return fmt.Errorf("error checking directory '%s': %w", dirPath, err)
+		return fmt.Errorf("error checking existence of directory \"%s\"", dirPath)
 	}
 	if !directoryExists {
 		return fmt.Errorf("directory \"%s\" does not exist", dirPath)
