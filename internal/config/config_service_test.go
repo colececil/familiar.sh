@@ -3,10 +3,12 @@ package config_test
 import (
 	"bytes"
 	"fmt"
-	"github.com/colececil/familiar.sh/internal/config"
+	. "github.com/colececil/familiar.sh/internal/config"
+	"github.com/colececil/familiar.sh/internal/packagemanagers"
 	"github.com/colececil/familiar.sh/internal/test"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"io"
 	"strings"
 )
 
@@ -18,13 +20,13 @@ var _ = Describe("ConfigService", func() {
 
 	var fileSystemServiceDouble *test.FileSystemServiceDouble
 	var outputWriterDouble *bytes.Buffer
-	var configService *config.ConfigService
+	var configService *ConfigService
 
 	BeforeEach(func() {
 		fileSystemServiceDouble = test.NewFileSystemServiceDouble()
 		fileSystemServiceDouble.SetXdgConfigHome(configHomeLocation)
 		outputWriterDouble = new(bytes.Buffer)
-		configService = config.NewConfigService(fileSystemServiceDouble, outputWriterDouble)
+		configService = NewConfigService(fileSystemServiceDouble, outputWriterDouble)
 	})
 
 	Describe("GetConfigLocation", func() {
@@ -156,19 +158,122 @@ var _ = Describe("ConfigService", func() {
 			})
 
 			It("should create Familiar's XDG config directory if it does not exist", func() {
+				err := configService.SetConfigLocation(configLocation)
+				Expect(err).To(BeNil())
+
+				_, err = fileSystemServiceDouble.ReadFile(configHomeLocation + "/" + appDirectoryName)
+				Expect(err).To(BeNil())
 			})
 
 			It("should return an error if there is an issue creating Familiar's XDG config directory", func() {
+				fileSystemServiceDouble.ReturnErrorFromMethod("CreateDirectory",
+					configHomeLocation+"/"+appDirectoryName)
+				err := configService.SetConfigLocation(configLocation)
+				Expect(err.Error()).To(Equal("error creating directory"))
 			})
 
 			It("should return an error if there is an issue creating the config location file", func() {
+				fileSystemServiceDouble.ReturnErrorFromMethod("CreateFile", configHomeLocation+"/"+appDirectoryName+"/"+
+					configLocationFileName)
+				err := configService.SetConfigLocation(configLocation)
+				Expect(err.Error()).To(Equal("error creating file"))
 			})
 		})
 	})
 
 	Describe("GetConfig", func() {
-		It("should return the contents of the config file as a pointer to a Config struct", func() {
+		const packageManager1Name = "packageManager1"
+		const packageManager2Name = "packageManager2"
+		const packageManager3Name = "packageManager3"
+		const package1Name = "package1"
+		const package2Name = "package2"
+		const package3Name = "package3"
+
+		var configLocationFile io.WriteCloser
+		var configFile io.WriteCloser
+		var packageManagerRegistry packagemanagers.PackageManagerRegistry
+
+		BeforeEach(func() {
+			configLocationFile, _ = fileSystemServiceDouble.CreateFile(configHomeLocation + "/" + appDirectoryName +
+				"/" + configLocationFileName)
+			_, _ = configLocationFile.Write([]byte(configLocation))
+			_ = configLocationFile.Close()
+
+			configFile, _ = fileSystemServiceDouble.CreateFile(configLocation)
+
+			packageManagerRegistry = packagemanagers.NewPackageManagerRegistry([]packagemanagers.PackageManager{
+				test.NewPackageManagerDouble(packageManager1Name),
+				test.NewPackageManagerDouble(packageManager2Name),
+				test.NewPackageManagerDouble(packageManager3Name),
+			})
 		})
+
+		DescribeTable("should return the contents of the config file as a pointer to a Config struct",
+			func(fileContent string, expectedConfigSetupFunc func(expectedConfig *Config)) {
+				_, _ = configFile.Write([]byte(fileContent))
+				_ = configFile.Close()
+
+				expectedConfig := NewConfig()
+				expectedConfigSetupFunc(expectedConfig)
+
+				result, err := configService.GetConfig()
+
+				Expect(err).To(BeNil())
+				Expect(result).To(Equal(expectedConfig))
+			},
+			Entry("when the config is empty",
+				`version: 1
+files: []
+scripts: []
+packageManagers: []`,
+				func(expectedConfig *Config) {},
+			),
+			Entry("when the config contains package managers with no packages",
+				`version: 1
+files: []
+scripts: []
+packageManagers:
+    - name: packageManager1
+      packages: []
+    - name: packageManager2
+      packages: []`,
+				func(expectedConfig *Config) {
+					_ = expectedConfig.AddPackageManager(packageManager1Name, packageManagerRegistry)
+					_ = expectedConfig.AddPackageManager(packageManager2Name, packageManagerRegistry)
+				},
+			),
+			Entry("when the config contains package managers with packages",
+				`version: 1
+files: []
+scripts: []
+packageManagers:
+    - name: packageManager1
+      packages:
+          - name: package1
+            version: 1.0.0
+          - name: package2
+            version: 1.1.1
+    - name: packageManager2
+      packages: []
+    - name: packageManager3
+      packages:
+          - name: package3
+            version: 1.0.1`,
+				func(expectedConfig *Config) {
+					_ = expectedConfig.AddPackageManager(packageManager1Name, packageManagerRegistry)
+					_ = expectedConfig.AddPackage(packageManager1Name, package1Name,
+						packagemanagers.NewVersion("1.0.0"))
+					_ = expectedConfig.AddPackage(packageManager1Name, package2Name,
+						packagemanagers.NewVersion("1.1.1"))
+
+					_ = expectedConfig.AddPackageManager(packageManager2Name, packageManagerRegistry)
+
+					_ = expectedConfig.AddPackageManager(packageManager3Name, packageManagerRegistry)
+					_ = expectedConfig.AddPackage(packageManager3Name, package3Name,
+						packagemanagers.NewVersion("1.0.1"))
+				},
+			),
+		)
 
 		It("should return a new Config struct if the config file does not yet exist", func() {
 		})

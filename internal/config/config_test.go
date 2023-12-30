@@ -346,8 +346,8 @@ packageManagers:
 })
 
 // parseYamlString parses the given yaml string and returns the result
-func parseYamlString(yamlString string) (interface{}, error) {
-	var result interface{}
+func parseYamlString(yamlString string) (any, error) {
+	var result any
 	err := yaml.Unmarshal([]byte(yamlString), &result)
 	return result, err
 }
