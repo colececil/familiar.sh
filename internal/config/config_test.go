@@ -296,7 +296,8 @@ var _ = Describe("Config", func() {
 				`version: 1
 files: []
 scripts: []
-packageManagers: []`,
+packageManagers: []
+`,
 				func() {},
 			),
 			Entry("when the config contains package managers with no packages",
@@ -304,10 +305,11 @@ packageManagers: []`,
 files: []
 scripts: []
 packageManagers:
-    - name: packageManager1
-      packages: []
-    - name: packageManager2
-      packages: []`,
+  - name: packageManager1
+    packages: []
+  - name: packageManager2
+    packages: []
+`,
 				func() {
 					_ = config.AddPackageManager(packageManager1Name, packageManagerRegistry)
 					_ = config.AddPackageManager(packageManager2Name, packageManagerRegistry)
@@ -318,18 +320,19 @@ packageManagers:
 files: []
 scripts: []
 packageManagers:
-    - name: packageManager1
-      packages:
-          - name: package1
-            version: 1.0.0
-          - name: package2
-            version: 1.1.1
-    - name: packageManager2
-      packages: []
-    - name: packageManager3
-      packages:
-          - name: package3
-            version: 1.0.1`,
+  - name: packageManager1
+    packages:
+      - name: package1
+        version: 1.0.0
+      - name: package2
+        version: 1.1.1
+  - name: packageManager2
+    packages: []
+  - name: packageManager3
+    packages:
+      - name: package3
+        version: 1.0.1
+`,
 				func() {
 					_ = config.AddPackageManager(packageManager1Name, packageManagerRegistry)
 					_ = config.AddPackage(packageManager1Name, package1Name, packagemanagers.NewVersion("1.0.0"))
@@ -345,7 +348,7 @@ packageManagers:
 	})
 })
 
-// parseYamlString parses the given yaml string and returns the result
+// parseYamlString parses the given YAML string and returns the result.
 func parseYamlString(yamlString string) (any, error) {
 	var result any
 	err := yaml.Unmarshal([]byte(yamlString), &result)

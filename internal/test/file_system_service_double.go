@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/colececil/familiar.sh/internal/system"
 	"io"
+	"io/fs"
 	"os"
 	"strings"
 )
@@ -106,7 +107,7 @@ func (double *FileSystemServiceDouble) ReadFile(path string) ([]byte, error) {
 	}
 	file, isPresent := double.createdFiles[path]
 	if !isPresent {
-		return nil, fmt.Errorf("file at path \"%s\" does not exist", path)
+		return nil, fs.ErrNotExist
 	}
 	if !file.isClosed {
 		return nil, fmt.Errorf("file at path \"%s\" is not closed", path)

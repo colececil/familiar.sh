@@ -115,6 +115,7 @@ func (service *ConfigService) GetConfig() (*Config, error) {
 			if err = service.SetConfig(newConfig); err != nil {
 				return nil, err
 			}
+			return newConfig, nil
 		} else {
 			return nil, err
 		}

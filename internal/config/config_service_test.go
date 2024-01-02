@@ -225,7 +225,8 @@ var _ = Describe("ConfigService", func() {
 				`version: 1
 files: []
 scripts: []
-packageManagers: []`,
+packageManagers: []
+`,
 				func(expectedConfig *Config) {},
 			),
 			Entry("when the config contains package managers with no packages",
@@ -233,10 +234,11 @@ packageManagers: []`,
 files: []
 scripts: []
 packageManagers:
-    - name: packageManager1
-      packages: []
-    - name: packageManager2
-      packages: []`,
+  - name: packageManager1
+    packages: []
+  - name: packageManager2
+    packages: []
+`,
 				func(expectedConfig *Config) {
 					_ = expectedConfig.AddPackageManager(packageManager1Name, packageManagerRegistry)
 					_ = expectedConfig.AddPackageManager(packageManager2Name, packageManagerRegistry)
@@ -247,18 +249,19 @@ packageManagers:
 files: []
 scripts: []
 packageManagers:
-    - name: packageManager1
-      packages:
-          - name: package1
-            version: 1.0.0
-          - name: package2
-            version: 1.1.1
-    - name: packageManager2
-      packages: []
-    - name: packageManager3
-      packages:
-          - name: package3
-            version: 1.0.1`,
+  - name: packageManager1
+    packages:
+      - name: package1
+        version: 1.0.0
+      - name: package2
+        version: 1.1.1
+  - name: packageManager2
+    packages: []
+  - name: packageManager3
+    packages:
+      - name: package3
+        version: 1.0.1
+`,
 				func(expectedConfig *Config) {
 					_ = expectedConfig.AddPackageManager(packageManager1Name, packageManagerRegistry)
 					_ = expectedConfig.AddPackage(packageManager1Name, package1Name,
@@ -275,43 +278,200 @@ packageManagers:
 			),
 		)
 
-		It("should return a new Config struct if the config file does not yet exist", func() {
-		})
+		When("the config file does not exist", func() {
+			const otherConfigLocation = "/other/path/to/config.yml"
 
-		It("should create the config file using a new Config struct if it does not exist", func() {
-		})
+			BeforeEach(func() {
+				configLocationFile, _ = fileSystemServiceDouble.CreateFile(configHomeLocation + "/" + appDirectoryName +
+					"/" + configLocationFileName)
+				_, _ = configLocationFile.Write([]byte(otherConfigLocation))
+				_ = configLocationFile.Close()
+			})
 
-		It("should close the config file after writing to it", func() {
+			It("should return a new Config struct", func() {
+				expectedConfig := NewConfig()
+
+				result, err := configService.GetConfig()
+
+				Expect(err).To(BeNil())
+				Expect(result).To(Equal(expectedConfig))
+			})
+
+			It("should create the config file using a new Config struct", func() {
+				expectedFileContent := `version: 1
+files: []
+scripts: []
+packageManagers: []
+`
+
+				_, err := configService.GetConfig()
+				fileContentBytes, _ := fileSystemServiceDouble.ReadFile(otherConfigLocation)
+				fileContent := string(fileContentBytes)
+
+				Expect(err).To(BeNil())
+				Expect(fileContent).To(Equal(expectedFileContent))
+			})
+
+			It("should close the config file after writing to it", func() {
+				_, err := configService.GetConfig()
+				file, _ := fileSystemServiceDouble.GetCreatedFile(otherConfigLocation)
+
+				Expect(err).To(BeNil())
+				Expect(file.IsClosed()).To(BeTrue())
+			})
+
+			It("should return an error if there is an issue creating the config file", func() {
+				fileSystemServiceDouble.ReturnErrorFromMethod("CreateFile", otherConfigLocation)
+				_, err := configService.GetConfig()
+				Expect(err.Error()).To(Equal("error creating file"))
+			})
 		})
 
 		It("should return an error if the config file location is not set", func() {
-		})
+			configLocationFile, _ = fileSystemServiceDouble.CreateFile(configHomeLocation + "/" + appDirectoryName +
+				"/" + configLocationFileName)
+			_, _ = configLocationFile.Write([]byte{})
+			_ = configLocationFile.Close()
 
-		It("should return an error if there is an issue converting the file contents from YAML to a Config struct",
-			func() {
-			})
+			_, err := configService.GetConfig()
+
+			Expect(err.Error()).To(Equal("The location of Familiar's shared config file has not yet been set. Please " +
+				"set it using \"familiar config location <path>\", for more details, execute \"familiar help " +
+				"config\"."))
+		})
 
 		It("should return an error if the config file exists but there is an issue reading it", func() {
-		})
-
-		It("should return an error if it needs to create the config file but is unable to", func() {
+			fileSystemServiceDouble.ReturnErrorFromMethod("ReadFile", configLocation)
+			_, err := configService.GetConfig()
+			Expect(err.Error()).To(Equal("error reading file"))
 		})
 	})
 
 	Describe("SetConfig", func() {
-		It("should write the given configuration to the config file as YAML", func() {
+		const packageManager1Name = "packageManager1"
+		const packageManager2Name = "packageManager2"
+		const packageManager3Name = "packageManager3"
+		const package1Name = "package1"
+		const package2Name = "package2"
+		const package3Name = "package3"
+
+		var configLocationFile io.WriteCloser
+		var config *Config
+		var packageManagerRegistry packagemanagers.PackageManagerRegistry
+
+		BeforeEach(func() {
+			configLocationFile, _ = fileSystemServiceDouble.CreateFile(configHomeLocation + "/" + appDirectoryName +
+				"/" + configLocationFileName)
+			_, _ = configLocationFile.Write([]byte(configLocation))
+			_ = configLocationFile.Close()
+
+			config = NewConfig()
+
+			packageManagerRegistry = packagemanagers.NewPackageManagerRegistry([]packagemanagers.PackageManager{
+				test.NewPackageManagerDouble(packageManager1Name),
+				test.NewPackageManagerDouble(packageManager2Name),
+				test.NewPackageManagerDouble(packageManager3Name),
+			})
 		})
 
+		DescribeTable("should write the given configuration to the config file as YAML",
+			func(expectedFileContent string, configSetupFunc func()) {
+				configSetupFunc()
+
+				err := configService.SetConfig(config)
+				fileContentBytes, _ := fileSystemServiceDouble.ReadFile(configLocation)
+				fileContent := string(fileContentBytes)
+
+				Expect(err).To(BeNil())
+
+				parsedExpected, err := parseYamlString(expectedFileContent)
+				Expect(err).To(BeNil())
+				parsedResult, err := parseYamlString(fileContent)
+				Expect(err).To(BeNil())
+
+				Expect(parsedResult).To(Equal(parsedExpected))
+			},
+			Entry("when the config is empty",
+				`version: 1
+files: []
+scripts: []
+packageManagers: []
+`,
+				func() {},
+			),
+			Entry("when the config contains package managers with no packages",
+				`version: 1
+files: []
+scripts: []
+packageManagers:
+  - name: packageManager1
+    packages: []
+  - name: packageManager2
+    packages: []
+`,
+				func() {
+					_ = config.AddPackageManager(packageManager1Name, packageManagerRegistry)
+					_ = config.AddPackageManager(packageManager2Name, packageManagerRegistry)
+				},
+			),
+			Entry("when the config contains package managers with packages",
+				`version: 1
+files: []
+scripts: []
+packageManagers:
+  - name: packageManager1
+    packages:
+      - name: package1
+        version: 1.0.0
+      - name: package2
+        version: 1.1.1
+  - name: packageManager2
+    packages: []
+  - name: packageManager3
+    packages:
+      - name: package3
+        version: 1.0.1
+`,
+				func() {
+					_ = config.AddPackageManager(packageManager1Name, packageManagerRegistry)
+					_ = config.AddPackage(packageManager1Name, package1Name,
+						packagemanagers.NewVersion("1.0.0"))
+					_ = config.AddPackage(packageManager1Name, package2Name,
+						packagemanagers.NewVersion("1.1.1"))
+
+					_ = config.AddPackageManager(packageManager2Name, packageManagerRegistry)
+
+					_ = config.AddPackageManager(packageManager3Name, packageManagerRegistry)
+					_ = config.AddPackage(packageManager3Name, package3Name,
+						packagemanagers.NewVersion("1.0.1"))
+				},
+			),
+		)
+
 		It("should close the config file after writing to it", func() {
+			err := configService.SetConfig(config)
+			file, _ := fileSystemServiceDouble.GetCreatedFile(configLocation)
+
+			Expect(err).To(BeNil())
+			Expect(file.IsClosed()).To(BeTrue())
 		})
 
 		It("should return an error if the config file location is not set", func() {
+			configLocationFile, _ = fileSystemServiceDouble.CreateFile(configHomeLocation + "/" + appDirectoryName +
+				"/" + configLocationFileName)
+			_, _ = configLocationFile.Write([]byte{})
+			_ = configLocationFile.Close()
+
+			err := configService.SetConfig(config)
+			Expect(err.Error()).To(Equal("The location of Familiar's shared config file has not yet been set. Please " +
+				"set it using \"familiar config location <path>\", for more details, execute \"familiar help " +
+				"config\"."))
 		})
 
 		It("should return an error if there is an issue creating or updating the config file", func() {
-		})
-
-		It("should return an error if there is an issue converting the Config struct to YAML", func() {
+			fileSystemServiceDouble.ReturnErrorFromMethod("CreateFile", configLocation)
+			err := configService.SetConfig(config)
+			Expect(err.Error()).To(Equal("error creating file"))
 		})
 	})
 })
