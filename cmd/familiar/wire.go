@@ -3,6 +3,7 @@
 package main
 
 import (
+	"github.com/adrg/xdg"
 	"github.com/colececil/familiar.sh/internal/commands"
 	"github.com/colececil/familiar.sh/internal/config"
 	"github.com/colececil/familiar.sh/internal/packagemanagers"
@@ -10,6 +11,7 @@ import (
 	"github.com/google/wire"
 	"io"
 	"os"
+	"path/filepath"
 	"runtime"
 )
 
@@ -20,6 +22,14 @@ var providers = wire.NewSet(
 	getFamiliarVersion,
 	getCurrentOperatingSystem,
 	getPackageManagers,
+	getXdgConfigHomeGetter,
+	getAbsPathConverter,
+	getDirPathGetter,
+	getDirCreator,
+	getFileExistenceChecker,
+	getFileReader,
+	getFileCreator,
+	getFileSystem,
 	getOutputWriter,
 	commands.NewCommandRegistry,
 	commands.NewVersionCommand,
@@ -31,7 +41,6 @@ var providers = wire.NewSet(
 	packagemanagers.NewPackageManagerRegistry,
 	packagemanagers.NewScoopPackageManager,
 	system.NewOperatingSystemService,
-	system.NewFileSystemService,
 	system.NewCreateShellCommandFunc,
 	system.NewRunShellCommandFunc,
 	system.NewShellCommandService,
@@ -59,7 +68,78 @@ func getCurrentOperatingSystem() system.OperatingSystem {
 	return system.OperatingSystem(runtime.GOOS)
 }
 
-// getOutputWriter returns the output writer.
+// getXdgConfigHomeGetter returns a function the returns the XDG config home directory as a system.XdgConfigHomeGetter.
+func getXdgConfigHomeGetter() system.XdgConfigHomeGetter {
+	return system.XdgConfigHomeGetterFunc(
+		func() string {
+			return xdg.ConfigHome
+		})
+}
+
+// getAbsPathConverter returns filepath.Abs as a system.AbsPathConverter.
+func getAbsPathConverter() system.AbsPathConverter {
+	return system.AbsPathConverterFunc(filepath.Abs)
+}
+
+// getDirPathGetter returns filepath.Dir as a system.PathDirGetter.
+func getDirPathGetter() system.PathDirGetter {
+	return system.PathDirGetterFunc(filepath.Dir)
+}
+
+// getFileExtensionGetter returns filepath.Ext as a system.FileExtensionGetter.
+func getFileExtensionGetter() system.FileExtensionGetter {
+	return system.FileExtensionGetterFunc(filepath.Ext)
+}
+
+// getDirCreator returns os.MkdirAll as a system.DirCreator.
+func getDirCreator() system.DirCreator {
+	return system.DirCreatorFunc(os.MkdirAll)
+}
+
+// getFileExistenceChecker returns system.FileExists as a system.FileExistenceChecker.
+func getFileExistenceChecker() system.FileExistenceChecker {
+	return system.FileExistenceCheckerFunc(system.FileExists)
+}
+
+// getFileReader returns os.ReadFile as a system.FileReader.
+func getFileReader() system.FileReader {
+	return system.FileReaderFunc(os.ReadFile)
+}
+
+// getFileCreator returns os.Create as a system.FileCreator.
+func getFileCreator() system.FileCreator {
+	return system.FileCreatorFunc(
+		func(path string) (io.WriteCloser, error) {
+			file, err := os.Create(path)
+			return io.WriteCloser(file), err
+		})
+}
+
+// getFileSystem returns an instance of config.FileSystem.
+func getFileSystem() config.FileSystem {
+	return config.FileSystem(
+		struct {
+			system.XdgConfigHomeGetter
+			system.AbsPathConverter
+			system.PathDirGetter
+			system.FileExtensionGetter
+			system.DirCreator
+			system.FileExistenceChecker
+			system.FileReader
+			system.FileCreator
+		}{
+			getXdgConfigHomeGetter(),
+			getAbsPathConverter(),
+			getDirPathGetter(),
+			getFileExtensionGetter(),
+			getDirCreator(),
+			getFileExistenceChecker(),
+			getFileReader(),
+			getFileCreator(),
+		})
+}
+
+// getOutputWriter returns os.Stdout as an io.Writer.
 func getOutputWriter() io.Writer {
 	return os.Stdout
 }

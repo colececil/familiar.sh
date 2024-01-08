@@ -16,25 +16,38 @@ const configLocationNotSetError = "The location of Familiar's shared config file
 
 // ConfigService is a service that manages the shared configuration file.
 type ConfigService struct {
-	fileSystemService system.FileSystemService
-	outputWriter      io.Writer
+	fileSystem   FileSystem
+	outputWriter io.Writer
 }
 
 // NewConfigService creates a new instance of ConfigService.
-func NewConfigService(fileSystemService system.FileSystemService, outputWriter io.Writer) *ConfigService {
+func NewConfigService(fileSystem FileSystem, outputWriter io.Writer) *ConfigService {
+
 	return &ConfigService{
-		fileSystemService: fileSystemService,
-		outputWriter:      outputWriter,
+		fileSystem:   fileSystem,
+		outputWriter: outputWriter,
 	}
+}
+
+// FileSystem is an interface that provides necessary methods to interact with the underlying file system.
+type FileSystem interface {
+	system.XdgConfigHomeGetter
+	system.AbsPathConverter
+	system.PathDirGetter
+	system.FileExtensionGetter
+	system.DirCreator
+	system.FileExistenceChecker
+	system.FileReader
+	system.FileCreator
 }
 
 // GetConfigLocation returns the location of the shared configuration file, as stored in the "config_location" file in
 // Familiar's XDG config directory. If the "config_location" file does not exist or is empty, an error is returned.
-func (service *ConfigService) GetConfigLocation() (string, error) {
-	configDir := service.fileSystemService.GetXdgConfigHome()
+func (s *ConfigService) GetConfigLocation() (string, error) {
+	configDir := s.fileSystem.GetXdgConfigHome()
 
 	configLocationFilePath := configDir + "/" + appDirectoryName + "/" + configLocationFileName
-	bytes, err := service.fileSystemService.ReadFile(configLocationFilePath)
+	bytes, err := s.fileSystem.ReadFile(configLocationFilePath)
 	if err != nil {
 		return "", fmt.Errorf(configLocationNotSetError)
 	}
@@ -53,19 +66,19 @@ func (service *ConfigService) GetConfigLocation() (string, error) {
 //
 // If the directory of the file specified by the given path does not exist, or if the file specified by the path does
 // not have a YAML file extension, an error is returned.
-func (service *ConfigService) SetConfigLocation(path string) error {
-	absolutePath, err := service.fileSystemService.Abs(path)
+func (s *ConfigService) SetConfigLocation(path string) error {
+	absolutePath, err := s.fileSystem.Abs(path)
 	if err != nil {
 		return fmt.Errorf("unable to parse the given path")
 	}
 
-	ext := service.fileSystemService.Ext(absolutePath)
+	ext := s.fileSystem.Ext(absolutePath)
 	if ext != ".yml" && ext != ".yaml" {
 		return fmt.Errorf("invalid file extension \"%s\": expected \".yml\" or \".yaml\"", ext)
 	}
 
-	dirPath := service.fileSystemService.Dir(absolutePath)
-	directoryExists, err := service.fileSystemService.FileExists(dirPath)
+	dirPath := s.fileSystem.Dir(absolutePath)
+	directoryExists, err := s.fileSystem.FileExists(dirPath)
 	if err != nil {
 		return fmt.Errorf("error checking existence of directory \"%s\"", dirPath)
 	}
@@ -73,16 +86,16 @@ func (service *ConfigService) SetConfigLocation(path string) error {
 		return fmt.Errorf("directory \"%s\" does not exist", dirPath)
 	}
 
-	configDir := service.fileSystemService.GetXdgConfigHome()
+	configDir := s.fileSystem.GetXdgConfigHome()
 
 	configLocationFilePath := configDir + "/" + appDirectoryName + "/" + configLocationFileName
 
-	err = service.fileSystemService.CreateDirectory(configDir+"/"+appDirectoryName, 0660)
+	err = s.fileSystem.CreateDirectory(configDir+"/"+appDirectoryName, 0660)
 	if err != nil {
 		return err
 	}
 
-	file, err := service.fileSystemService.CreateFile(configLocationFilePath)
+	file, err := s.fileSystem.CreateFile(configLocationFilePath)
 	if err != nil {
 		return err
 	}
@@ -92,7 +105,7 @@ func (service *ConfigService) SetConfigLocation(path string) error {
 
 	_, err = fmt.Fprintln(file, absolutePath)
 	if err == nil {
-		_, err = fmt.Fprintf(service.outputWriter, "The config file location has been set to \"%s\".\n", absolutePath)
+		_, err = fmt.Fprintf(s.outputWriter, "The config file location has been set to \"%s\".\n", absolutePath)
 	}
 	return err
 }
@@ -102,17 +115,17 @@ func (service *ConfigService) SetConfigLocation(path string) error {
 //
 // An error is returned if the config file location is not set, or if there is an issue unmarshalling the config file
 // to a Config struct.
-func (service *ConfigService) GetConfig() (*Config, error) {
-	configLocation, err := service.GetConfigLocation()
+func (s *ConfigService) GetConfig() (*Config, error) {
+	configLocation, err := s.GetConfigLocation()
 	if err != nil {
 		return nil, err
 	}
 
-	bytes, err := service.fileSystemService.ReadFile(configLocation)
+	bytes, err := s.fileSystem.ReadFile(configLocation)
 	if err != nil {
 		if os.IsNotExist(err) {
 			newConfig := NewConfig()
-			if err = service.SetConfig(newConfig); err != nil {
+			if err = s.SetConfig(newConfig); err != nil {
 				return nil, err
 			}
 			return newConfig, nil
@@ -131,13 +144,13 @@ func (service *ConfigService) GetConfig() (*Config, error) {
 
 // SetConfig writes the given configuration to the config file as YAML. An error is returned if the config file location
 // is not set, or if there is an issue creating or updating the config file.
-func (service *ConfigService) SetConfig(config *Config) error {
-	configLocation, err := service.GetConfigLocation()
+func (s *ConfigService) SetConfig(config *Config) error {
+	configLocation, err := s.GetConfigLocation()
 	if err != nil {
 		return err
 	}
 
-	file, err := service.fileSystemService.CreateFile(configLocation)
+	file, err := s.fileSystem.CreateFile(configLocation)
 	if err != nil {
 		return err
 	}

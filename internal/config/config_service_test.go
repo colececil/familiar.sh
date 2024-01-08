@@ -18,20 +18,20 @@ var _ = Describe("ConfigService", func() {
 	const configLocationFileName = "config_location"
 	const configLocation = "/path/to/config.yml"
 
-	var fileSystemServiceDouble *test.FileSystemServiceDouble
+	var fileSystemDouble *test.FileSystemDouble
 	var outputWriterDouble *bytes.Buffer
 	var configService *ConfigService
 
 	BeforeEach(func() {
-		fileSystemServiceDouble = test.NewFileSystemServiceDouble()
-		fileSystemServiceDouble.SetXdgConfigHome(configHomeLocation)
+		fileSystemDouble = test.NewFileSystemDouble()
+		fileSystemDouble.SetXdgConfigHome(configHomeLocation)
 		outputWriterDouble = new(bytes.Buffer)
-		configService = NewConfigService(fileSystemServiceDouble, outputWriterDouble)
+		configService = NewConfigService(fileSystemDouble, outputWriterDouble)
 	})
 
 	Describe("GetConfigLocation", func() {
 		It("should return the config location defined in the config location file", func() {
-			file, _ := fileSystemServiceDouble.CreateFile(configHomeLocation + "/" + appDirectoryName + "/" +
+			file, _ := fileSystemDouble.CreateFile(configHomeLocation + "/" + appDirectoryName + "/" +
 				configLocationFileName)
 			_, _ = file.Write([]byte(configLocation))
 			_ = file.Close()
@@ -55,7 +55,7 @@ var _ = Describe("ConfigService", func() {
 		It("should return an error if the config location file is empty", func() {
 			expectedError := fmt.Errorf("The location of Familiar's shared config file has not yet been set. Please " +
 				"set it using \"familiar config location <path>\", for more details, execute \"familiar help config\".")
-			file, _ := fileSystemServiceDouble.CreateFile(configHomeLocation + "/" + appDirectoryName + "/" +
+			file, _ := fileSystemDouble.CreateFile(configHomeLocation + "/" + appDirectoryName + "/" +
 				configLocationFileName)
 			_ = file.Close()
 
@@ -70,24 +70,24 @@ var _ = Describe("ConfigService", func() {
 		var expectedFileContent string
 
 		BeforeEach(func() {
-			configFileDir := fileSystemServiceDouble.Dir(configLocation)
-			file, _ := fileSystemServiceDouble.CreateFile(configFileDir)
+			configFileDir := fileSystemDouble.Dir(configLocation)
+			file, _ := fileSystemDouble.CreateFile(configFileDir)
 			_ = file.Close()
 
-			expectedFileContent, _ = fileSystemServiceDouble.Abs(configLocation)
+			expectedFileContent, _ = fileSystemDouble.Abs(configLocation)
 			expectedFileContent += "\n"
 		})
 
 		When("the config location file exists", func() {
 			BeforeEach(func() {
-				file, _ := fileSystemServiceDouble.CreateFile(configHomeLocation + "/" + appDirectoryName + "/" +
+				file, _ := fileSystemDouble.CreateFile(configHomeLocation + "/" + appDirectoryName + "/" +
 					configLocationFileName)
 				_ = file.Close()
 			})
 
 			It("should write the given path to the config location file", func() {
 				err := configService.SetConfigLocation(configLocation)
-				fileContentBytes, _ := fileSystemServiceDouble.ReadFile(configHomeLocation + "/" +
+				fileContentBytes, _ := fileSystemDouble.ReadFile(configHomeLocation + "/" +
 					appDirectoryName + "/" + configLocationFileName)
 				fileContent := string(fileContentBytes)
 
@@ -104,7 +104,7 @@ var _ = Describe("ConfigService", func() {
 
 			It("should close the config location file after writing to it", func() {
 				err := configService.SetConfigLocation(configLocation)
-				file, _ := fileSystemServiceDouble.GetCreatedFile(configHomeLocation + "/" + appDirectoryName + "/" +
+				file, _ := fileSystemDouble.GetCreatedFile(configHomeLocation + "/" + appDirectoryName + "/" +
 					configLocationFileName)
 
 				Expect(err).To(BeNil())
@@ -126,20 +126,20 @@ var _ = Describe("ConfigService", func() {
 
 			It("should return an error if there is an issue determining the absolute representation of the given path",
 				func() {
-					fileSystemServiceDouble.ReturnErrorFromMethod("Abs", configLocation)
+					fileSystemDouble.ReturnErrorFromMethod("Abs", configLocation)
 					err := configService.SetConfigLocation(configLocation)
 					Expect(err.Error()).To(Equal("unable to parse the given path"))
 				})
 
 			It("should return an error if there is an issue checking if the directory exists", func() {
-				dir := fileSystemServiceDouble.Dir(configLocation)
-				fileSystemServiceDouble.ReturnErrorFromMethod("FileExists", dir)
+				dir := fileSystemDouble.Dir(configLocation)
+				fileSystemDouble.ReturnErrorFromMethod("FileExists", dir)
 				err := configService.SetConfigLocation(configLocation)
 				Expect(err.Error()).To(Equal(fmt.Sprintf("error checking existence of directory \"%s\"", dir)))
 			})
 
 			It("should return an error if there is an issue updating the config location file", func() {
-				fileSystemServiceDouble.ReturnErrorFromMethod("CreateFile", configHomeLocation+"/"+appDirectoryName+"/"+
+				fileSystemDouble.ReturnErrorFromMethod("CreateFile", configHomeLocation+"/"+appDirectoryName+"/"+
 					configLocationFileName)
 				err := configService.SetConfigLocation(configLocation)
 				Expect(err.Error()).To(Equal("error creating file"))
@@ -149,7 +149,7 @@ var _ = Describe("ConfigService", func() {
 		When("the config location file does not exist", func() {
 			It("should create the config location file", func() {
 				err := configService.SetConfigLocation(configLocation)
-				fileContentBytes, _ := fileSystemServiceDouble.ReadFile(configHomeLocation + "/" +
+				fileContentBytes, _ := fileSystemDouble.ReadFile(configHomeLocation + "/" +
 					appDirectoryName + "/" + configLocationFileName)
 				fileContent := string(fileContentBytes)
 
@@ -161,19 +161,19 @@ var _ = Describe("ConfigService", func() {
 				err := configService.SetConfigLocation(configLocation)
 				Expect(err).To(BeNil())
 
-				_, err = fileSystemServiceDouble.ReadFile(configHomeLocation + "/" + appDirectoryName)
+				_, err = fileSystemDouble.ReadFile(configHomeLocation + "/" + appDirectoryName)
 				Expect(err).To(BeNil())
 			})
 
 			It("should return an error if there is an issue creating Familiar's XDG config directory", func() {
-				fileSystemServiceDouble.ReturnErrorFromMethod("CreateDirectory",
+				fileSystemDouble.ReturnErrorFromMethod("CreateDirectory",
 					configHomeLocation+"/"+appDirectoryName)
 				err := configService.SetConfigLocation(configLocation)
 				Expect(err.Error()).To(Equal("error creating directory"))
 			})
 
 			It("should return an error if there is an issue creating the config location file", func() {
-				fileSystemServiceDouble.ReturnErrorFromMethod("CreateFile", configHomeLocation+"/"+appDirectoryName+"/"+
+				fileSystemDouble.ReturnErrorFromMethod("CreateFile", configHomeLocation+"/"+appDirectoryName+"/"+
 					configLocationFileName)
 				err := configService.SetConfigLocation(configLocation)
 				Expect(err.Error()).To(Equal("error creating file"))
@@ -194,12 +194,12 @@ var _ = Describe("ConfigService", func() {
 		var packageManagerRegistry packagemanagers.PackageManagerRegistry
 
 		BeforeEach(func() {
-			configLocationFile, _ = fileSystemServiceDouble.CreateFile(configHomeLocation + "/" + appDirectoryName +
+			configLocationFile, _ = fileSystemDouble.CreateFile(configHomeLocation + "/" + appDirectoryName +
 				"/" + configLocationFileName)
 			_, _ = configLocationFile.Write([]byte(configLocation))
 			_ = configLocationFile.Close()
 
-			configFile, _ = fileSystemServiceDouble.CreateFile(configLocation)
+			configFile, _ = fileSystemDouble.CreateFile(configLocation)
 
 			packageManagerRegistry = packagemanagers.NewPackageManagerRegistry([]packagemanagers.PackageManager{
 				test.NewPackageManagerDouble(packageManager1Name),
@@ -282,7 +282,7 @@ packageManagers:
 			const otherConfigLocation = "/other/path/to/config.yml"
 
 			BeforeEach(func() {
-				configLocationFile, _ = fileSystemServiceDouble.CreateFile(configHomeLocation + "/" + appDirectoryName +
+				configLocationFile, _ = fileSystemDouble.CreateFile(configHomeLocation + "/" + appDirectoryName +
 					"/" + configLocationFileName)
 				_, _ = configLocationFile.Write([]byte(otherConfigLocation))
 				_ = configLocationFile.Close()
@@ -305,7 +305,7 @@ packageManagers: []
 `
 
 				_, err := configService.GetConfig()
-				fileContentBytes, _ := fileSystemServiceDouble.ReadFile(otherConfigLocation)
+				fileContentBytes, _ := fileSystemDouble.ReadFile(otherConfigLocation)
 				fileContent := string(fileContentBytes)
 
 				Expect(err).To(BeNil())
@@ -314,21 +314,21 @@ packageManagers: []
 
 			It("should close the config file after writing to it", func() {
 				_, err := configService.GetConfig()
-				file, _ := fileSystemServiceDouble.GetCreatedFile(otherConfigLocation)
+				file, _ := fileSystemDouble.GetCreatedFile(otherConfigLocation)
 
 				Expect(err).To(BeNil())
 				Expect(file.IsClosed()).To(BeTrue())
 			})
 
 			It("should return an error if there is an issue creating the config file", func() {
-				fileSystemServiceDouble.ReturnErrorFromMethod("CreateFile", otherConfigLocation)
+				fileSystemDouble.ReturnErrorFromMethod("CreateFile", otherConfigLocation)
 				_, err := configService.GetConfig()
 				Expect(err.Error()).To(Equal("error creating file"))
 			})
 		})
 
 		It("should return an error if the config file location is not set", func() {
-			configLocationFile, _ = fileSystemServiceDouble.CreateFile(configHomeLocation + "/" + appDirectoryName +
+			configLocationFile, _ = fileSystemDouble.CreateFile(configHomeLocation + "/" + appDirectoryName +
 				"/" + configLocationFileName)
 			_, _ = configLocationFile.Write([]byte{})
 			_ = configLocationFile.Close()
@@ -341,7 +341,7 @@ packageManagers: []
 		})
 
 		It("should return an error if the config file exists but there is an issue reading it", func() {
-			fileSystemServiceDouble.ReturnErrorFromMethod("ReadFile", configLocation)
+			fileSystemDouble.ReturnErrorFromMethod("ReadFile", configLocation)
 			_, err := configService.GetConfig()
 			Expect(err.Error()).To(Equal("error reading file"))
 		})
@@ -360,7 +360,7 @@ packageManagers: []
 		var packageManagerRegistry packagemanagers.PackageManagerRegistry
 
 		BeforeEach(func() {
-			configLocationFile, _ = fileSystemServiceDouble.CreateFile(configHomeLocation + "/" + appDirectoryName +
+			configLocationFile, _ = fileSystemDouble.CreateFile(configHomeLocation + "/" + appDirectoryName +
 				"/" + configLocationFileName)
 			_, _ = configLocationFile.Write([]byte(configLocation))
 			_ = configLocationFile.Close()
@@ -379,7 +379,7 @@ packageManagers: []
 				configSetupFunc()
 
 				err := configService.SetConfig(config)
-				fileContentBytes, _ := fileSystemServiceDouble.ReadFile(configLocation)
+				fileContentBytes, _ := fileSystemDouble.ReadFile(configLocation)
 				fileContent := string(fileContentBytes)
 
 				Expect(err).To(BeNil())
@@ -450,14 +450,14 @@ packageManagers:
 
 		It("should close the config file after writing to it", func() {
 			err := configService.SetConfig(config)
-			file, _ := fileSystemServiceDouble.GetCreatedFile(configLocation)
+			file, _ := fileSystemDouble.GetCreatedFile(configLocation)
 
 			Expect(err).To(BeNil())
 			Expect(file.IsClosed()).To(BeTrue())
 		})
 
 		It("should return an error if the config file location is not set", func() {
-			configLocationFile, _ = fileSystemServiceDouble.CreateFile(configHomeLocation + "/" + appDirectoryName +
+			configLocationFile, _ = fileSystemDouble.CreateFile(configHomeLocation + "/" + appDirectoryName +
 				"/" + configLocationFileName)
 			_, _ = configLocationFile.Write([]byte{})
 			_ = configLocationFile.Close()
@@ -469,7 +469,7 @@ packageManagers:
 		})
 
 		It("should return an error if there is an issue creating or updating the config file", func() {
-			fileSystemServiceDouble.ReturnErrorFromMethod("CreateFile", configLocation)
+			fileSystemDouble.ReturnErrorFromMethod("CreateFile", configLocation)
 			err := configService.SetConfig(config)
 			Expect(err.Error()).To(Equal("error creating file"))
 		})
