@@ -21,6 +21,7 @@ const projectVersion = "0.0.0"
 var providers = wire.NewSet(
 	getFamiliarVersion,
 	getCurrentOperatingSystem,
+	getCommands,
 	getPackageManagers,
 	getXdgConfigHomeGetter,
 	getAbsPathConverter,
@@ -56,6 +57,23 @@ func InitializeCommandRegistry() commands.CommandRegistry {
 func getFamiliarVersion() commands.FamiliarVersionString {
 	version := commands.FamiliarVersionString(projectVersion)
 	return version
+}
+
+// getCommands returns a slice containing all commands.
+func getCommands(
+	helpCommand *commands.HelpCommand,
+	versionCommand *commands.VersionCommand,
+	attuneCommand *commands.AttuneCommand,
+	configCommand *commands.ConfigCommand,
+	packageCommand *commands.PackageCommand,
+) []commands.Command {
+	return []commands.Command{
+		helpCommand,
+		versionCommand,
+		attuneCommand,
+		configCommand,
+		packageCommand,
+	}
 }
 
 // getPackageManagers returns a slice containing all package managers.

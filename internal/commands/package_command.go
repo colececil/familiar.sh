@@ -23,17 +23,22 @@ func NewPackageCommand(configService *config.ConfigService,
 }
 
 // Name returns the name of the command, as it appears on the command line while being used.
-func (packageCommand *PackageCommand) Name() string {
+func (c *PackageCommand) Name() string {
 	return "package"
 }
 
+// Order returns the order in which the command should be listed in the help command.
+func (c *PackageCommand) Order() int {
+	return 5
+}
+
 // Description returns a short description of the command.
-func (packageCommand *PackageCommand) Description() string {
+func (c *PackageCommand) Description() string {
 	return "Manage packages for a given package manager."
 }
 
 // Documentation returns detailed documentation for the command.
-func (packageCommand *PackageCommand) Documentation() string {
+func (c *PackageCommand) Documentation() string {
 	return `The "package" command provides subcommands for adding, removing, and listing packages for a given package manager. It also allows you to specify the version of a package to install. It has the following subcommands:
 
   search
@@ -52,7 +57,7 @@ func (packageCommand *PackageCommand) Documentation() string {
 //   - args: A slice containing the arguments to pass in to the command.
 //
 // If there is an error executing the command, Execute will return an error that can be displayed to the user.
-func (packageCommand *PackageCommand) Execute(args []string) error {
+func (c *PackageCommand) Execute(args []string) error {
 	if len(args) == 0 {
 		return fmt.Errorf("subcommand must be included")
 	}
@@ -62,9 +67,9 @@ func (packageCommand *PackageCommand) Execute(args []string) error {
 		subcommandArgs := args[1:]
 		switch len(subcommandArgs) {
 		case 1:
-			return packageCommand.addPackageManager(subcommandArgs[0])
+			return c.addPackageManager(subcommandArgs[0])
 		case 2:
-			return packageCommand.addPackage(subcommandArgs[0], subcommandArgs[1])
+			return c.addPackage(subcommandArgs[0], subcommandArgs[1])
 		default:
 			return fmt.Errorf("wrong number of arguments")
 		}
@@ -72,9 +77,9 @@ func (packageCommand *PackageCommand) Execute(args []string) error {
 		subcommandArgs := args[1:]
 		switch len(subcommandArgs) {
 		case 1:
-			return packageCommand.removePackageManager(subcommandArgs[0])
+			return c.removePackageManager(subcommandArgs[0])
 		case 2:
-			return packageCommand.removePackage(subcommandArgs[0], subcommandArgs[1])
+			return c.removePackage(subcommandArgs[0], subcommandArgs[1])
 		default:
 			return fmt.Errorf("wrong number of arguments")
 		}
@@ -82,11 +87,11 @@ func (packageCommand *PackageCommand) Execute(args []string) error {
 		subcommandArgs := args[1:]
 		switch len(subcommandArgs) {
 		case 0:
-			return packageCommand.updatePackages()
+			return c.updatePackages()
 		case 1:
-			return packageCommand.updatePackagesForPackageManager(subcommandArgs[0])
+			return c.updatePackagesForPackageManager(subcommandArgs[0])
 		case 2:
-			return packageCommand.updatePackage(subcommandArgs[0], subcommandArgs[1])
+			return c.updatePackage(subcommandArgs[0], subcommandArgs[1])
 		default:
 			return fmt.Errorf("wrong number of arguments")
 		}
@@ -94,11 +99,11 @@ func (packageCommand *PackageCommand) Execute(args []string) error {
 		subcommandArgs := args[1:]
 		switch len(subcommandArgs) {
 		case 0:
-			return packageCommand.getStatus()
+			return c.getStatus()
 		case 1:
-			return packageCommand.getStatusForPackageManager(subcommandArgs[0])
+			return c.getStatusForPackageManager(subcommandArgs[0])
 		case 2:
-			return packageCommand.getStatusForPackage(subcommandArgs[0], subcommandArgs[1])
+			return c.getStatusForPackage(subcommandArgs[0], subcommandArgs[1])
 		default:
 			return fmt.Errorf("wrong number of arguments")
 		}
@@ -106,9 +111,9 @@ func (packageCommand *PackageCommand) Execute(args []string) error {
 		subcommandArgs := args[1:]
 		switch len(subcommandArgs) {
 		case 0:
-			return packageCommand.importPackages()
+			return c.importPackages()
 		case 1:
-			return packageCommand.importPackagesFromPackageManager(subcommandArgs[0])
+			return c.importPackagesFromPackageManager(subcommandArgs[0])
 		default:
 			return fmt.Errorf("wrong number of arguments")
 		}
@@ -121,17 +126,17 @@ func (packageCommand *PackageCommand) Execute(args []string) error {
 //
 // It takes the following parameters:
 //   - packageManagerName: The name of the package manager to add.
-func (packageCommand *PackageCommand) addPackageManager(packageManagerName string) error {
-	configContents, err := packageCommand.configService.GetConfig()
+func (c *PackageCommand) addPackageManager(packageManagerName string) error {
+	configContents, err := c.configService.GetConfig()
 	if err != nil {
 		return err
 	}
 
-	if err = configContents.AddPackageManager(packageManagerName, packageCommand.packageManagerRegistry); err != nil {
+	if err = configContents.AddPackageManager(packageManagerName, c.packageManagerRegistry); err != nil {
 		return err
 	}
 
-	if err = packageCommand.configService.SetConfig(configContents); err != nil {
+	if err = c.configService.SetConfig(configContents); err != nil {
 		return err
 	}
 
@@ -143,8 +148,8 @@ func (packageCommand *PackageCommand) addPackageManager(packageManagerName strin
 //
 // It takes the following parameters:
 //   - packageManagerName: The name of the package manager to remove.
-func (packageCommand *PackageCommand) removePackageManager(packageManagerName string) error {
-	configContents, err := packageCommand.configService.GetConfig()
+func (c *PackageCommand) removePackageManager(packageManagerName string) error {
+	configContents, err := c.configService.GetConfig()
 	if err != nil {
 		return err
 	}
@@ -153,7 +158,7 @@ func (packageCommand *PackageCommand) removePackageManager(packageManagerName st
 		return err
 	}
 
-	if err = packageCommand.configService.SetConfig(configContents); err != nil {
+	if err = c.configService.SetConfig(configContents); err != nil {
 		return err
 	}
 
@@ -167,8 +172,8 @@ func (packageCommand *PackageCommand) removePackageManager(packageManagerName st
 // It takes the following parameters:
 //   - packageManagerName: The name of the package manager to use.
 //   - packageName: The name of the package to add.
-func (packageCommand *PackageCommand) addPackage(packageManagerName string, packageName string) error {
-	packageManager, err := packageCommand.packageManagerRegistry.GetPackageManager(packageManagerName)
+func (c *PackageCommand) addPackage(packageManagerName string, packageName string) error {
+	packageManager, err := c.packageManagerRegistry.GetPackageManager(packageManagerName)
 	if err != nil {
 		return err
 	}
@@ -182,7 +187,7 @@ func (packageCommand *PackageCommand) addPackage(packageManagerName string, pack
 		return err
 	}
 
-	configContents, err := packageCommand.configService.GetConfig()
+	configContents, err := c.configService.GetConfig()
 	if err != nil {
 		return err
 	}
@@ -191,7 +196,7 @@ func (packageCommand *PackageCommand) addPackage(packageManagerName string, pack
 		return err
 	}
 
-	return packageCommand.configService.SetConfig(configContents)
+	return c.configService.SetConfig(configContents)
 }
 
 // removePackage uninstalls the given package using the given package manager. After that, it removes the package from
@@ -200,8 +205,8 @@ func (packageCommand *PackageCommand) addPackage(packageManagerName string, pack
 // It takes the following parameters:
 //   - packageManagerName: The name of the package manager to use.
 //   - packageName: The name of the package to remove.
-func (packageCommand *PackageCommand) removePackage(packageManagerName string, packageName string) error {
-	packageManager, err := packageCommand.packageManagerRegistry.GetPackageManager(packageManagerName)
+func (c *PackageCommand) removePackage(packageManagerName string, packageName string) error {
+	packageManager, err := c.packageManagerRegistry.GetPackageManager(packageManagerName)
 	if err != nil {
 		return err
 	}
@@ -210,7 +215,7 @@ func (packageCommand *PackageCommand) removePackage(packageManagerName string, p
 		return err
 	}
 
-	configContents, err := packageCommand.configService.GetConfig()
+	configContents, err := c.configService.GetConfig()
 	if err != nil {
 		return err
 	}
@@ -219,13 +224,13 @@ func (packageCommand *PackageCommand) removePackage(packageManagerName string, p
 		return err
 	}
 
-	return packageCommand.configService.SetConfig(configContents)
+	return c.configService.SetConfig(configContents)
 }
 
 // updatePackages updates all currently installed packages for all package managers that are both supported and
 // installed.
-func (packageCommand *PackageCommand) updatePackages() error {
-	packageManagers := packageCommand.packageManagerRegistry.GetAllPackageManagers()
+func (c *PackageCommand) updatePackages() error {
+	packageManagers := c.packageManagerRegistry.GetAllPackageManagers()
 
 	for _, packageManager := range packageManagers {
 		if isSupported := packageManager.IsSupported(); !isSupported {
@@ -238,7 +243,7 @@ func (packageCommand *PackageCommand) updatePackages() error {
 		}
 
 		if isInstalled {
-			if err := packageCommand.updatePackagesForPackageManager(packageManager.Name()); err != nil {
+			if err := c.updatePackagesForPackageManager(packageManager.Name()); err != nil {
 				return err
 			}
 		} else {
@@ -250,13 +255,13 @@ func (packageCommand *PackageCommand) updatePackages() error {
 }
 
 // updatePackagesForPackageManager updates all currently installed packages for the package manager of the given name.
-func (packageCommand *PackageCommand) updatePackagesForPackageManager(packageManagerName string) error {
-	packageManager, err := packageCommand.packageManagerRegistry.GetPackageManager(packageManagerName)
+func (c *PackageCommand) updatePackagesForPackageManager(packageManagerName string) error {
+	packageManager, err := c.packageManagerRegistry.GetPackageManager(packageManagerName)
 	if err != nil {
 		return err
 	}
 
-	configContents, err := packageCommand.configService.GetConfig()
+	configContents, err := c.configService.GetConfig()
 	if err != nil {
 		return err
 	}
@@ -294,7 +299,7 @@ func (packageCommand *PackageCommand) updatePackagesForPackageManager(packageMan
 					return err
 				}
 
-				if err = packageCommand.configService.SetConfig(configContents); err != nil {
+				if err = c.configService.SetConfig(configContents); err != nil {
 					return err
 				}
 			}
@@ -307,8 +312,8 @@ func (packageCommand *PackageCommand) updatePackagesForPackageManager(packageMan
 }
 
 // updatePackage updates the given package for the given package manager.
-func (packageCommand *PackageCommand) updatePackage(packageManagerName string, packageName string) error {
-	packageManager, err := packageCommand.packageManagerRegistry.GetPackageManager(packageManagerName)
+func (c *PackageCommand) updatePackage(packageManagerName string, packageName string) error {
+	packageManager, err := c.packageManagerRegistry.GetPackageManager(packageManagerName)
 	if err != nil {
 		return err
 	}
@@ -330,7 +335,7 @@ func (packageCommand *PackageCommand) updatePackage(packageManagerName string, p
 					return err
 				}
 
-				configContents, err := packageCommand.configService.GetConfig()
+				configContents, err := c.configService.GetConfig()
 				if err != nil {
 					return err
 				}
@@ -346,7 +351,7 @@ func (packageCommand *PackageCommand) updatePackage(packageManagerName string, p
 										return err
 									}
 
-									if err = packageCommand.configService.SetConfig(configContents); err != nil {
+									if err = c.configService.SetConfig(configContents); err != nil {
 										return err
 									}
 								}
@@ -369,8 +374,8 @@ func (packageCommand *PackageCommand) updatePackage(packageManagerName string, p
 }
 
 // getStatus prints the status for all package managers supported on the current machine.
-func (packageCommand *PackageCommand) getStatus() error {
-	packageManagers := packageCommand.packageManagerRegistry.GetAllPackageManagers()
+func (c *PackageCommand) getStatus() error {
+	packageManagers := c.packageManagerRegistry.GetAllPackageManagers()
 
 	for _, packageManager := range packageManagers {
 		if isSupported := packageManager.IsSupported(); !isSupported {
@@ -383,7 +388,7 @@ func (packageCommand *PackageCommand) getStatus() error {
 		}
 
 		if isInstalled {
-			if err := packageCommand.getStatusForPackageManager(packageManager.Name()); err != nil {
+			if err := c.getStatusForPackageManager(packageManager.Name()); err != nil {
 				return err
 			}
 		} else {
@@ -395,8 +400,8 @@ func (packageCommand *PackageCommand) getStatus() error {
 }
 
 // getStatusForPackageManager prints the status for the package manager of the given name.
-func (packageCommand *PackageCommand) getStatusForPackageManager(packageManagerName string) error {
-	configContents, err := packageCommand.configService.GetConfig()
+func (c *PackageCommand) getStatusForPackageManager(packageManagerName string) error {
+	configContents, err := c.configService.GetConfig()
 	if err != nil {
 		return err
 	}
@@ -411,7 +416,7 @@ func (packageCommand *PackageCommand) getStatusForPackageManager(packageManagerN
 		}
 	}
 
-	packageManager, err := packageCommand.packageManagerRegistry.GetPackageManager(packageManagerName)
+	packageManager, err := c.packageManagerRegistry.GetPackageManager(packageManagerName)
 	if err != nil {
 		return err
 	}
@@ -479,8 +484,8 @@ func (packageCommand *PackageCommand) getStatusForPackageManager(packageManagerN
 }
 
 // getStatusForPackage prints the status for the given package under the given package manager.
-func (packageCommand *PackageCommand) getStatusForPackage(packageManagerName string, packageName string) error {
-	configContents, err := packageCommand.configService.GetConfig()
+func (c *PackageCommand) getStatusForPackage(packageManagerName string, packageName string) error {
+	configContents, err := c.configService.GetConfig()
 	if err != nil {
 		return err
 	}
@@ -497,7 +502,7 @@ func (packageCommand *PackageCommand) getStatusForPackage(packageManagerName str
 		}
 	}
 
-	packageManager, err := packageCommand.packageManagerRegistry.GetPackageManager(packageManagerName)
+	packageManager, err := c.packageManagerRegistry.GetPackageManager(packageManagerName)
 	if err != nil {
 		return err
 	}
@@ -551,8 +556,8 @@ func (packageCommand *PackageCommand) getStatusForPackage(packageManagerName str
 
 // importPackages imports all currently installed packages from all package managers that are both supported and
 // installed.
-func (packageCommand *PackageCommand) importPackages() error {
-	packageManagers := packageCommand.packageManagerRegistry.GetAllPackageManagers()
+func (c *PackageCommand) importPackages() error {
+	packageManagers := c.packageManagerRegistry.GetAllPackageManagers()
 
 	for _, packageManager := range packageManagers {
 		if isSupported := packageManager.IsSupported(); !isSupported {
@@ -565,7 +570,7 @@ func (packageCommand *PackageCommand) importPackages() error {
 		}
 
 		if isInstalled {
-			if err := packageCommand.importPackagesFromPackageManager(packageManager.Name()); err != nil {
+			if err := c.importPackagesFromPackageManager(packageManager.Name()); err != nil {
 				return err
 			}
 		} else {
@@ -577,8 +582,8 @@ func (packageCommand *PackageCommand) importPackages() error {
 }
 
 // importPackagesFromPackageManager imports all currently installed packages from the given package manager.
-func (packageCommand *PackageCommand) importPackagesFromPackageManager(packageManagerName string) error {
-	configContents, err := packageCommand.configService.GetConfig()
+func (c *PackageCommand) importPackagesFromPackageManager(packageManagerName string) error {
+	configContents, err := c.configService.GetConfig()
 	if err != nil {
 		return err
 	}
@@ -594,7 +599,7 @@ func (packageCommand *PackageCommand) importPackagesFromPackageManager(packageMa
 		}
 	}
 
-	packageManager, err := packageCommand.packageManagerRegistry.GetPackageManager(packageManagerName)
+	packageManager, err := c.packageManagerRegistry.GetPackageManager(packageManagerName)
 	if err != nil {
 		return err
 	}
@@ -630,7 +635,7 @@ func (packageCommand *PackageCommand) importPackagesFromPackageManager(packageMa
 				return err
 			}
 
-			if err := packageCommand.configService.SetConfig(configContents); err != nil {
+			if err := c.configService.SetConfig(configContents); err != nil {
 				return err
 			}
 
@@ -645,7 +650,7 @@ func (packageCommand *PackageCommand) importPackagesFromPackageManager(packageMa
 				return err
 			}
 
-			if err := packageCommand.configService.SetConfig(configContents); err != nil {
+			if err := c.configService.SetConfig(configContents); err != nil {
 				return err
 			}
 

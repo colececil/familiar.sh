@@ -10,10 +10,11 @@ type PackageManagerRegistry map[string]PackageManager
 
 // NewPackageManagerRegistry returns a new instance of PackageManagerRegistry.
 func NewPackageManagerRegistry(packageManagers []PackageManager) PackageManagerRegistry {
-	packageManagerRegistry := make(map[string]PackageManager)
+	packageManagerRegistry := make(PackageManagerRegistry)
 	for _, packageManager := range packageManagers {
 		packageManagerRegistry[packageManager.Name()] = packageManager
 	}
+	packageManagerRegistry.validate()
 	return packageManagerRegistry
 }
 
@@ -44,4 +45,9 @@ func (packageManagerRegistry PackageManagerRegistry) GetPackageManager(packageMa
 	}
 
 	return packageManager, nil
+}
+
+// Todo: Implement and test this method.
+func (packageManagerRegistry PackageManagerRegistry) validate() {
+	panic("not implemented")
 }

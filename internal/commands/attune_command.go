@@ -21,17 +21,22 @@ func NewAttuneCommand(configService *config.ConfigService,
 }
 
 // Name returns the name of the command, as it appears on the command line while being used.
-func (attuneCommand *AttuneCommand) Name() string {
+func (c *AttuneCommand) Name() string {
 	return "attune"
 }
 
+// Order returns the order in which the command should be listed in the help command.
+func (c *AttuneCommand) Order() int {
+	return 3
+}
+
 // Description returns a short description of the command.
-func (attuneCommand *AttuneCommand) Description() string {
+func (c *AttuneCommand) Description() string {
 	return "Sync the current machine with the config file."
 }
 
 // Documentation returns detailed documentation for the command.
-func (attuneCommand *AttuneCommand) Documentation() string {
+func (c *AttuneCommand) Documentation() string {
 	return "Set up the current machine so it matches the shared configuration. To do this, Familiar.sh will perform " +
 		"the following operations as needed: installing packages, uninstalling packages, copying files, and running " +
 		"scripts."
@@ -43,18 +48,18 @@ func (attuneCommand *AttuneCommand) Documentation() string {
 //   - args: A slice containing the arguments to pass in to the command.
 //
 // If there is an error executing the command, Execute will return an error that can be displayed to the user.
-func (attuneCommand *AttuneCommand) Execute(args []string) error {
+func (c *AttuneCommand) Execute(args []string) error {
 	if len(args) > 0 {
 		return fmt.Errorf("the \"attune\" command does not take any arguments")
 	}
 
-	configContents, err := attuneCommand.configService.GetConfig()
+	configContents, err := c.configService.GetConfig()
 	if err != nil {
 		return err
 	}
 
 	for _, packageManagerInConfig := range configContents.PackageManagers {
-		packageManager, err := attuneCommand.packageManagerRegistry.GetPackageManager(packageManagerInConfig.Name)
+		packageManager, err := c.packageManagerRegistry.GetPackageManager(packageManagerInConfig.Name)
 		if err != nil {
 			return err
 		}
@@ -125,7 +130,7 @@ func (attuneCommand *AttuneCommand) Execute(args []string) error {
 							return err
 						}
 
-						if err = attuneCommand.configService.SetConfig(configContents); err != nil {
+						if err = c.configService.SetConfig(configContents); err != nil {
 							return err
 						}
 					}
@@ -147,7 +152,7 @@ func (attuneCommand *AttuneCommand) Execute(args []string) error {
 						return err
 					}
 
-					if err = attuneCommand.configService.SetConfig(configContents); err != nil {
+					if err = c.configService.SetConfig(configContents); err != nil {
 						return err
 					}
 				}

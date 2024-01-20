@@ -7,6 +7,9 @@ type Command interface {
 	// Name returns the name of the command, as it appears on the command line while being used.
 	Name() string
 
+	// Order returns the order in which the command should be listed in the help command.
+	Order() int
+
 	// Description returns a short description of the command.
 	Description() string
 

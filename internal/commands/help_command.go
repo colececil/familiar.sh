@@ -24,17 +24,22 @@ func NewHelpCommand(versionCommand *VersionCommand, attuneCommand *AttuneCommand
 }
 
 // Name returns the name of the command, as it appears on the command line while being used.
-func (helpCommand *HelpCommand) Name() string {
+func (c *HelpCommand) Name() string {
 	return "help"
 }
 
+// Order returns the order in which the command should be listed in the help command.
+func (c *HelpCommand) Order() int {
+	return 1
+}
+
 // Description returns a short description of the command.
-func (helpCommand *HelpCommand) Description() string {
+func (c *HelpCommand) Description() string {
 	return "List help information."
 }
 
 // Documentation returns detailed documentation for the command.
-func (helpCommand *HelpCommand) Documentation() string {
+func (c *HelpCommand) Documentation() string {
 	return "The `help` command lists information about all available Familiar CLI commands. If you provide a command name as an argument, it will display detailed documentation for that command.\n\nUsage:\n  familiar help\n  familiar help <command>"
 }
 
@@ -44,14 +49,14 @@ func (helpCommand *HelpCommand) Documentation() string {
 //   - args: A slice containing the arguments to pass in to the command.
 //
 // If there is an error executing the command, Execute will return an error that can be displayed to the user.
-func (helpCommand *HelpCommand) Execute(args []string) error {
+func (c *HelpCommand) Execute(args []string) error {
 	if len(args) == 0 {
 		// No command name was provided - display a list of all available commands.
 		fmt.Println(`Usage: familiar <command> [<args>]
 
 Available commands are listed below. Run "familiar help <command>" to get detailed documentation for a specific command.`)
-		fmt.Printf("  %-15s %s\n", helpCommand.Name(), helpCommand.Description())
-		for _, command := range helpCommand.Commands {
+		fmt.Printf("  %-15s %s\n", c.Name(), c.Description())
+		for _, command := range c.Commands {
 			fmt.Printf("  %-15s %s\n", command.Name(), command.Description())
 		}
 		fmt.Println()
@@ -61,9 +66,9 @@ Available commands are listed below. Run "familiar help <command>" to get detail
 		name := args[0]
 		isPresent := false
 		if name == "help" {
-			fmt.Printf("%s - %s\n\n%s\n", name, helpCommand.Description(), helpCommand.Documentation())
+			fmt.Printf("%s - %s\n\n%s\n", name, c.Description(), c.Documentation())
 		} else {
-			for _, command := range helpCommand.Commands {
+			for _, command := range c.Commands {
 				if command.Name() == name {
 					isPresent = true
 					fmt.Printf("%s - %s\n\n%s\n", name, command.Description(), command.Documentation())
