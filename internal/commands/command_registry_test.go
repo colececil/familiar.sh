@@ -12,11 +12,11 @@ var _ = Describe("CommandRegistry", func() {
 
 	BeforeEach(func() {
 		commandRegistry = NewCommandRegistry(
-			test.NewCommandDouble("help", 1),
-			test.NewCommandDouble("version", 2),
-			test.NewCommandDouble("attune", 3),
-			test.NewCommandDouble("config", 4),
 			test.NewCommandDouble("package", 5),
+			test.NewCommandDouble("config", 4),
+			test.NewCommandDouble("attune", 3),
+			test.NewCommandDouble("version", 2),
+			test.NewCommandDouble("help", 1),
 		)
 	})
 
@@ -35,15 +35,39 @@ var _ = Describe("CommandRegistry", func() {
 		})
 
 		It("should panic if any of the commands' orders are less than 1", func() {
-			Fail("todo")
+			Expect(func() {
+				NewCommandRegistry(
+					test.NewCommandDouble("help", 0),
+					test.NewCommandDouble("version", 2),
+					test.NewCommandDouble("attune", 3),
+					test.NewCommandDouble("config", 4),
+					test.NewCommandDouble("package", 5),
+				)
+			}).To(PanicWith(panicMessage))
 		})
 
 		It("should panic if any of the commands' orders are greater than the number of commands", func() {
-			Fail("todo")
+			Expect(func() {
+				NewCommandRegistry(
+					test.NewCommandDouble("help", 1),
+					test.NewCommandDouble("version", 2),
+					test.NewCommandDouble("attune", 3),
+					test.NewCommandDouble("config", 4),
+					test.NewCommandDouble("package", 6),
+				)
+			}).To(PanicWith(panicMessage))
 		})
 
 		It("should panic if any of the commands' orders are not unique", func() {
-			Fail("todo")
+			Expect(func() {
+				NewCommandRegistry(
+					test.NewCommandDouble("help", 1),
+					test.NewCommandDouble("version", 2),
+					test.NewCommandDouble("attune", 3),
+					test.NewCommandDouble("config", 3),
+					test.NewCommandDouble("package", 5),
+				)
+			}).To(PanicWith(panicMessage))
 		})
 	})
 
@@ -62,11 +86,14 @@ var _ = Describe("CommandRegistry", func() {
 
 	Describe("GetCommand", func() {
 		It("should return the command of the given name if it is in the registry", func() {
-			Fail("todo")
+			command, err := commandRegistry.GetCommand("package")
+			Expect(err).To(BeNil())
+			Expect(command.Name()).To(Equal("package"))
 		})
 
 		It("should return an error if the command with the given name is not in the registry", func() {
-			Fail("todo")
+			_, err := commandRegistry.GetCommand("invalid")
+			Expect(err.Error()).To(Equal("command not valid"))
 		})
 	})
 })
