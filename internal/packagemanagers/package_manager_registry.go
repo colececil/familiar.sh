@@ -3,7 +3,6 @@ package packagemanagers
 import (
 	"fmt"
 	"slices"
-	"strings"
 )
 
 type PackageManagerRegistry map[string]PackageManager
@@ -19,16 +18,13 @@ func NewPackageManagerRegistry(packageManagers []PackageManager) PackageManagerR
 }
 
 // GetAllPackageManagers returns a slice containing all package managers.
-func (packageManagerRegistry PackageManagerRegistry) GetAllPackageManagers() []PackageManager {
+func (r PackageManagerRegistry) GetAllPackageManagers() []PackageManager {
 	var packageManagersSlice []PackageManager
-	for _, packageManager := range packageManagerRegistry {
+	for _, packageManager := range r {
 		packageManagersSlice = append(packageManagersSlice, packageManager)
 	}
 	slices.SortFunc(packageManagersSlice, func(packageManager1, packageManager2 PackageManager) int {
-		return strings.Compare(
-			strings.ToLower(packageManager1.Name()),
-			strings.ToLower(packageManager2.Name()),
-		)
+		return packageManager1.Order() - packageManager2.Order()
 	})
 	return packageManagersSlice
 }
@@ -37,9 +33,9 @@ func (packageManagerRegistry PackageManagerRegistry) GetAllPackageManagers() []P
 //
 // It takes the following parameters:
 //   - packageManagerName: The name of the package manager.
-func (packageManagerRegistry PackageManagerRegistry) GetPackageManager(packageManagerName string) (PackageManager,
+func (r PackageManagerRegistry) GetPackageManager(packageManagerName string) (PackageManager,
 	error) {
-	packageManager, isPresent := packageManagerRegistry[packageManagerName]
+	packageManager, isPresent := r[packageManagerName]
 	if !isPresent {
 		return nil, fmt.Errorf("package manager not valid")
 	}
@@ -47,7 +43,26 @@ func (packageManagerRegistry PackageManagerRegistry) GetPackageManager(packageMa
 	return packageManager, nil
 }
 
-// Todo: Implement and test this method.
-func (packageManagerRegistry PackageManagerRegistry) validate() {
-	panic("not implemented")
+func (r PackageManagerRegistry) validate() {
+	panicMessage := "package manager registry does not contain the expected package managers"
+	expectedPackageManagers := []string{"scoop", "chocolatey", "homebrew"}
+
+	if len(r) != len(expectedPackageManagers) {
+		panic(panicMessage)
+	}
+
+	for _, expectedPackageManager := range expectedPackageManagers {
+		if r[expectedPackageManager] == nil {
+			panic(panicMessage)
+		}
+	}
+
+	orderNumbersEncountered := make(map[int]bool)
+	for _, packageManager := range r {
+		order := packageManager.Order()
+		if order < 1 || order > len(r) || orderNumbersEncountered[order] {
+			panic(panicMessage)
+		}
+		orderNumbersEncountered[order] = true
+	}
 }

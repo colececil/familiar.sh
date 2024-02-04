@@ -6,17 +6,24 @@ import "github.com/colececil/familiar.sh/internal/packagemanagers"
 // stubbed out.
 type PackageManagerDouble struct {
 	packagemanagers.PackageManager
-	name string
+	name  string
+	order int
 }
 
 // NewPackageManagerDouble returns a new instance of PackageManagerDouble.
-func NewPackageManagerDouble(name string) *PackageManagerDouble {
+func NewPackageManagerDouble(name string, order int) *PackageManagerDouble {
 	return &PackageManagerDouble{
-		name: name,
+		name:  name,
+		order: order,
 	}
 }
 
 // Name returns the name of the package manager.
-func (packageManagerDouble *PackageManagerDouble) Name() string {
-	return packageManagerDouble.name
+func (d *PackageManagerDouble) Name() string {
+	return d.name
+}
+
+// Order returns the order of the package manager.
+func (d *PackageManagerDouble) Order() int {
+	return d.order
 }

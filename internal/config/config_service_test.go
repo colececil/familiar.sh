@@ -182,9 +182,9 @@ var _ = Describe("ConfigService", func() {
 	})
 
 	Describe("GetConfig", func() {
-		const packageManager1Name = "packageManager1"
-		const packageManager2Name = "packageManager2"
-		const packageManager3Name = "packageManager3"
+		const scoop = "scoop"
+		const chocolatey = "chocolatey"
+		const homebrew = "homebrew"
 		const package1Name = "package1"
 		const package2Name = "package2"
 		const package3Name = "package3"
@@ -202,9 +202,9 @@ var _ = Describe("ConfigService", func() {
 			configFile, _ = fileSystemDouble.CreateFile(configLocation)
 
 			packageManagerRegistry = packagemanagers.NewPackageManagerRegistry([]packagemanagers.PackageManager{
-				test.NewPackageManagerDouble(packageManager1Name),
-				test.NewPackageManagerDouble(packageManager2Name),
-				test.NewPackageManagerDouble(packageManager3Name),
+				test.NewPackageManagerDouble(scoop, 1),
+				test.NewPackageManagerDouble(chocolatey, 2),
+				test.NewPackageManagerDouble(homebrew, 3),
 			})
 		})
 
@@ -234,14 +234,14 @@ packageManagers: []
 files: []
 scripts: []
 packageManagers:
-  - name: packageManager1
+  - name: chocolatey
     packages: []
-  - name: packageManager2
+  - name: scoop
     packages: []
 `,
 				func(expectedConfig *Config) {
-					_ = expectedConfig.AddPackageManager(packageManager1Name, packageManagerRegistry)
-					_ = expectedConfig.AddPackageManager(packageManager2Name, packageManagerRegistry)
+					_ = expectedConfig.AddPackageManager(scoop, packageManagerRegistry)
+					_ = expectedConfig.AddPackageManager(chocolatey, packageManagerRegistry)
 				},
 			),
 			Entry("when the config contains package managers with packages",
@@ -249,30 +249,30 @@ packageManagers:
 files: []
 scripts: []
 packageManagers:
-  - name: packageManager1
+  - name: chocolatey
+    packages: []
+  - name: homebrew
+    packages:
+      - name: package3
+        version: 1.0.1
+  - name: scoop
     packages:
       - name: package1
         version: 1.0.0
       - name: package2
         version: 1.1.1
-  - name: packageManager2
-    packages: []
-  - name: packageManager3
-    packages:
-      - name: package3
-        version: 1.0.1
 `,
 				func(expectedConfig *Config) {
-					_ = expectedConfig.AddPackageManager(packageManager1Name, packageManagerRegistry)
-					_ = expectedConfig.AddPackage(packageManager1Name, package1Name,
+					_ = expectedConfig.AddPackageManager(scoop, packageManagerRegistry)
+					_ = expectedConfig.AddPackage(scoop, package1Name,
 						packagemanagers.NewVersion("1.0.0"))
-					_ = expectedConfig.AddPackage(packageManager1Name, package2Name,
+					_ = expectedConfig.AddPackage(scoop, package2Name,
 						packagemanagers.NewVersion("1.1.1"))
 
-					_ = expectedConfig.AddPackageManager(packageManager2Name, packageManagerRegistry)
+					_ = expectedConfig.AddPackageManager(chocolatey, packageManagerRegistry)
 
-					_ = expectedConfig.AddPackageManager(packageManager3Name, packageManagerRegistry)
-					_ = expectedConfig.AddPackage(packageManager3Name, package3Name,
+					_ = expectedConfig.AddPackageManager(homebrew, packageManagerRegistry)
+					_ = expectedConfig.AddPackage(homebrew, package3Name,
 						packagemanagers.NewVersion("1.0.1"))
 				},
 			),
@@ -348,9 +348,9 @@ packageManagers: []
 	})
 
 	Describe("SetConfig", func() {
-		const packageManager1Name = "packageManager1"
-		const packageManager2Name = "packageManager2"
-		const packageManager3Name = "packageManager3"
+		const scoop = "scoop"
+		const chocolatey = "chocolatey"
+		const homebrew = "homebrew"
 		const package1Name = "package1"
 		const package2Name = "package2"
 		const package3Name = "package3"
@@ -368,9 +368,9 @@ packageManagers: []
 			config = NewConfig()
 
 			packageManagerRegistry = packagemanagers.NewPackageManagerRegistry([]packagemanagers.PackageManager{
-				test.NewPackageManagerDouble(packageManager1Name),
-				test.NewPackageManagerDouble(packageManager2Name),
-				test.NewPackageManagerDouble(packageManager3Name),
+				test.NewPackageManagerDouble(scoop, 1),
+				test.NewPackageManagerDouble(chocolatey, 2),
+				test.NewPackageManagerDouble(homebrew, 3),
 			})
 		})
 
@@ -404,14 +404,14 @@ packageManagers: []
 files: []
 scripts: []
 packageManagers:
-  - name: packageManager1
+  - name: chocolatey
     packages: []
-  - name: packageManager2
+  - name: scoop
     packages: []
 `,
 				func() {
-					_ = config.AddPackageManager(packageManager1Name, packageManagerRegistry)
-					_ = config.AddPackageManager(packageManager2Name, packageManagerRegistry)
+					_ = config.AddPackageManager(scoop, packageManagerRegistry)
+					_ = config.AddPackageManager(chocolatey, packageManagerRegistry)
 				},
 			),
 			Entry("when the config contains package managers with packages",
@@ -419,30 +419,30 @@ packageManagers:
 files: []
 scripts: []
 packageManagers:
-  - name: packageManager1
+  - name: chocolatey
+    packages: []
+  - name: homebrew
+    packages:
+      - name: package3
+        version: 1.0.1
+  - name: scoop
     packages:
       - name: package1
         version: 1.0.0
       - name: package2
         version: 1.1.1
-  - name: packageManager2
-    packages: []
-  - name: packageManager3
-    packages:
-      - name: package3
-        version: 1.0.1
 `,
 				func() {
-					_ = config.AddPackageManager(packageManager1Name, packageManagerRegistry)
-					_ = config.AddPackage(packageManager1Name, package1Name,
+					_ = config.AddPackageManager(scoop, packageManagerRegistry)
+					_ = config.AddPackage(scoop, package1Name,
 						packagemanagers.NewVersion("1.0.0"))
-					_ = config.AddPackage(packageManager1Name, package2Name,
+					_ = config.AddPackage(scoop, package2Name,
 						packagemanagers.NewVersion("1.1.1"))
 
-					_ = config.AddPackageManager(packageManager2Name, packageManagerRegistry)
+					_ = config.AddPackageManager(chocolatey, packageManagerRegistry)
 
-					_ = config.AddPackageManager(packageManager3Name, packageManagerRegistry)
-					_ = config.AddPackage(packageManager3Name, package3Name,
+					_ = config.AddPackageManager(homebrew, packageManagerRegistry)
+					_ = config.AddPackage(homebrew, package3Name,
 						packagemanagers.NewVersion("1.0.1"))
 				},
 			),

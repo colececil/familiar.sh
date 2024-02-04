@@ -5,6 +5,9 @@ type PackageManager interface {
 	// Name returns the name of the package manager.
 	Name() string
 
+	// Order returns the order in which the package manager should be listed or encountered by various commands.
+	Order() int
+
 	// IsSupported returns whether the package manager is supported on the current machine.
 	IsSupported() bool
 

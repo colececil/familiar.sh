@@ -41,6 +41,8 @@ var providers = wire.NewSet(
 	config.NewConfigService,
 	packagemanagers.NewPackageManagerRegistry,
 	packagemanagers.NewScoopPackageManager,
+	packagemanagers.NewChocolateyPackageManager,
+	packagemanagers.NewHomebrewPackageManager,
 	system.NewOperatingSystemService,
 	system.NewCreateShellCommandFunc,
 	system.NewRunShellCommandFunc,
@@ -77,8 +79,16 @@ func getCommands(
 }
 
 // getPackageManagers returns a slice containing all package managers.
-func getPackageManagers(scoopPackageManager *packagemanagers.ScoopPackageManager) []packagemanagers.PackageManager {
-	return []packagemanagers.PackageManager{scoopPackageManager}
+func getPackageManagers(
+	scoopPackageManager *packagemanagers.ScoopPackageManager,
+	chocolateyPackageManager *packagemanagers.ChocolateyPackageManager,
+	homebrewPackageManager *packagemanagers.HomebrewPackageManager,
+) []packagemanagers.PackageManager {
+	return []packagemanagers.PackageManager{
+		scoopPackageManager,
+		chocolateyPackageManager,
+		homebrewPackageManager,
+	}
 }
 
 // getCurrentOperatingSystem returns the current operating system.
