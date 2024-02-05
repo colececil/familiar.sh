@@ -2,9 +2,9 @@ package packagemanagers_test
 
 import (
 	. "github.com/colececil/familiar.sh/internal/packagemanagers"
-	"github.com/colececil/familiar.sh/internal/test"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/ovechkin-dm/mockio/mock"
 )
 
 var _ = Describe("PackageManagerRegistry", func() {
@@ -18,9 +18,19 @@ var _ = Describe("PackageManagerRegistry", func() {
 	var homebrewPackageManager PackageManager
 
 	BeforeEach(func() {
-		scoopPackageManager = test.NewPackageManagerDouble(scoop, 1)
-		chocolateyPackageManager = test.NewPackageManagerDouble(chocolatey, 2)
-		homebrewPackageManager = test.NewPackageManagerDouble(homebrew, 3)
+		mock.SetUp(GinkgoT())
+
+		scoopPackageManager = mock.Mock[PackageManager]()
+		mock.WhenSingle(scoopPackageManager.Name()).ThenReturn(scoop)
+		mock.WhenSingle(scoopPackageManager.Order()).ThenReturn(1)
+
+		chocolateyPackageManager = mock.Mock[PackageManager]()
+		mock.WhenSingle(chocolateyPackageManager.Name()).ThenReturn(chocolatey)
+		mock.WhenSingle(chocolateyPackageManager.Order()).ThenReturn(2)
+
+		homebrewPackageManager = mock.Mock[PackageManager]()
+		mock.WhenSingle(homebrewPackageManager.Name()).ThenReturn(homebrew)
+		mock.WhenSingle(homebrewPackageManager.Order()).ThenReturn(3)
 
 		packageManagerRegistry = NewPackageManagerRegistry([]PackageManager{
 			homebrewPackageManager,
@@ -35,39 +45,57 @@ var _ = Describe("PackageManagerRegistry", func() {
 		It("should panic if the package manager registry does not contain the expected package managers", func() {
 			Expect(func() {
 				NewPackageManagerRegistry([]PackageManager{
-					test.NewPackageManagerDouble(scoop, 1),
-					test.NewPackageManagerDouble(chocolatey, 2),
+					scoopPackageManager,
+					chocolateyPackageManager,
 				})
 			}).To(PanicWith(panicMessage))
 		})
 
 		It("should panic if any of the package managers' orders are less than 1", func() {
+			mock.SetUp(GinkgoT())
+
+			scoopPackageManager = mock.Mock[PackageManager]()
+			mock.WhenSingle(scoopPackageManager.Name()).ThenReturn(scoop)
+			mock.WhenSingle(scoopPackageManager.Order()).ThenReturn(0)
+
 			Expect(func() {
 				NewPackageManagerRegistry([]PackageManager{
-					test.NewPackageManagerDouble(scoop, 0),
-					test.NewPackageManagerDouble(chocolatey, 2),
-					test.NewPackageManagerDouble(homebrew, 3),
+					scoopPackageManager,
+					chocolateyPackageManager,
+					homebrewPackageManager,
 				})
 			}).To(PanicWith(panicMessage))
 		})
 
 		It("should panic if any of the package managers' orders are greater than the number of package managers",
 			func() {
+				mock.SetUp(GinkgoT())
+
+				homebrewPackageManager = mock.Mock[PackageManager]()
+				mock.WhenSingle(homebrewPackageManager.Name()).ThenReturn(homebrew)
+				mock.WhenSingle(homebrewPackageManager.Order()).ThenReturn(4)
+
 				Expect(func() {
 					NewPackageManagerRegistry([]PackageManager{
-						test.NewPackageManagerDouble(scoop, 1),
-						test.NewPackageManagerDouble(chocolatey, 2),
-						test.NewPackageManagerDouble(homebrew, 4),
+						scoopPackageManager,
+						chocolateyPackageManager,
+						homebrewPackageManager,
 					})
 				}).To(PanicWith(panicMessage))
 			})
 
 		It("should panic if any of the package managers' orders are not unique", func() {
 			Expect(func() {
+				mock.SetUp(GinkgoT())
+
+				chocolateyPackageManager = mock.Mock[PackageManager]()
+				mock.WhenSingle(chocolateyPackageManager.Name()).ThenReturn(chocolatey)
+				mock.WhenSingle(chocolateyPackageManager.Order()).ThenReturn(1)
+
 				NewPackageManagerRegistry([]PackageManager{
-					test.NewPackageManagerDouble(scoop, 1),
-					test.NewPackageManagerDouble(chocolatey, 1),
-					test.NewPackageManagerDouble(homebrew, 3),
+					scoopPackageManager,
+					chocolateyPackageManager,
+					homebrewPackageManager,
 				})
 			}).To(PanicWith(panicMessage))
 		})

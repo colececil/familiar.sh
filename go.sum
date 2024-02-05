@@ -25,6 +25,12 @@ github.com/onsi/ginkgo/v2 v2.11.0 h1:WgqUCUt/lT6yXoQ8Wef0fsNn5cAuMK7+KT9UFRz2tcU
 github.com/onsi/ginkgo/v2 v2.11.0/go.mod h1:ZhrRA5XmEE3x3rhlzamx/JJvujdZoJ2uvgI7kR0iZvM=
 github.com/onsi/gomega v1.27.8 h1:gegWiwZjBsf2DgiSbf5hpokZ98JVDMcWkUiigk6/KXc=
 github.com/onsi/gomega v1.27.8/go.mod h1:2J8vzI/s+2shY9XHRApDkdgPo1TKT7P2u6fXeJKFnNQ=
+github.com/ovechkin-dm/go-dyno v0.0.21 h1:Yex+MO92Jb/kfKTJfjgOdPNDK3s4970lgGYn3fOFFUs=
+github.com/ovechkin-dm/go-dyno v0.0.21/go.mod h1:CcJNuo7AbePMoRNpM3i1jC1Rp9kHEMyWozNdWzR+0ys=
+github.com/ovechkin-dm/mockio v0.5.0 h1:ojWRkTfkfJDVmjcIwRNjXHoh+HtXK0KlmXr53oO4Esw=
+github.com/ovechkin-dm/mockio v0.5.0/go.mod h1:a6+oqToo70J4j0uQ4JcYXPByut6nIe5lM1a4R+Jqc2M=
+github.com/petermattis/goid v0.0.0-20230904192822-1876fd5063bc h1:8bQZVK1X6BJR/6nYUPxQEP+ReTsceJTKizeuwjWOPUA=
+github.com/petermattis/goid v0.0.0-20230904192822-1876fd5063bc/go.mod h1:pxMtw7cyUw6B2bRH0ZBANSPg+AoSud1I1iyJHI69jH4=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=

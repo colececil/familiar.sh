@@ -3,9 +3,9 @@ package config_test
 import (
 	. "github.com/colececil/familiar.sh/internal/config"
 	"github.com/colececil/familiar.sh/internal/packagemanagers"
-	"github.com/colececil/familiar.sh/internal/test"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/ovechkin-dm/mockio/mock"
 	"gopkg.in/yaml.v3"
 )
 
@@ -21,12 +21,27 @@ var _ = Describe("Config", func() {
 	var packageManagerRegistry packagemanagers.PackageManagerRegistry
 
 	BeforeEach(func() {
-		config = NewConfig()
+		mock.SetUp(GinkgoT())
+
+		scoopPackageManager := mock.Mock[packagemanagers.PackageManager]()
+		mock.WhenSingle(scoopPackageManager.Name()).ThenReturn(scoop)
+		mock.WhenSingle(scoopPackageManager.Order()).ThenReturn(1)
+
+		chocolateyPackageManager := mock.Mock[packagemanagers.PackageManager]()
+		mock.WhenSingle(chocolateyPackageManager.Name()).ThenReturn(chocolatey)
+		mock.WhenSingle(chocolateyPackageManager.Order()).ThenReturn(2)
+
+		homebrewPackageManager := mock.Mock[packagemanagers.PackageManager]()
+		mock.WhenSingle(homebrewPackageManager.Name()).ThenReturn(homebrew)
+		mock.WhenSingle(homebrewPackageManager.Order()).ThenReturn(3)
+
 		packageManagerRegistry = packagemanagers.NewPackageManagerRegistry([]packagemanagers.PackageManager{
-			test.NewPackageManagerDouble(scoop, 1),
-			test.NewPackageManagerDouble(chocolatey, 2),
-			test.NewPackageManagerDouble(homebrew, 3),
+			scoopPackageManager,
+			chocolateyPackageManager,
+			homebrewPackageManager,
 		})
+
+		config = NewConfig()
 	})
 
 	Describe("AddPackageManager", func() {
