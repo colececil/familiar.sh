@@ -2,21 +2,48 @@ package commands_test
 
 import (
 	. "github.com/colececil/familiar.sh/internal/commands"
-	"github.com/colececil/familiar.sh/internal/test"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/ovechkin-dm/mockio/mock"
 )
 
 var _ = Describe("CommandRegistry", func() {
 	var commandRegistry CommandRegistry
+	var helpCommand Command
+	var versionCommand Command
+	var attuneCommand Command
+	var configCommand Command
+	var packageCommand Command
 
 	BeforeEach(func() {
+		mock.SetUp(GinkgoT())
+
+		helpCommand = mock.Mock[Command]()
+		mock.WhenSingle(helpCommand.Name()).ThenReturn("help")
+		mock.WhenSingle(helpCommand.Order()).ThenReturn(1)
+
+		versionCommand = mock.Mock[Command]()
+		mock.WhenSingle(versionCommand.Name()).ThenReturn("version")
+		mock.WhenSingle(versionCommand.Order()).ThenReturn(2)
+
+		attuneCommand = mock.Mock[Command]()
+		mock.WhenSingle(attuneCommand.Name()).ThenReturn("attune")
+		mock.WhenSingle(attuneCommand.Order()).ThenReturn(3)
+
+		configCommand = mock.Mock[Command]()
+		mock.WhenSingle(configCommand.Name()).ThenReturn("config")
+		mock.WhenSingle(configCommand.Order()).ThenReturn(4)
+
+		packageCommand = mock.Mock[Command]()
+		mock.WhenSingle(packageCommand.Name()).ThenReturn("package")
+		mock.WhenSingle(packageCommand.Order()).ThenReturn(5)
+
 		commandRegistry = NewCommandRegistry(
-			test.NewCommandDouble("package", 5),
-			test.NewCommandDouble("config", 4),
-			test.NewCommandDouble("attune", 3),
-			test.NewCommandDouble("version", 2),
-			test.NewCommandDouble("help", 1),
+			packageCommand,
+			configCommand,
+			attuneCommand,
+			versionCommand,
+			helpCommand,
 		)
 	})
 
@@ -26,46 +53,64 @@ var _ = Describe("CommandRegistry", func() {
 		It("should panic if the command registry does not contain the expected commands", func() {
 			Expect(func() {
 				NewCommandRegistry(
-					test.NewCommandDouble("help", 1),
-					test.NewCommandDouble("version", 2),
-					test.NewCommandDouble("attune", 3),
-					test.NewCommandDouble("config", 4),
+					helpCommand,
+					versionCommand,
+					attuneCommand,
+					configCommand,
 				)
 			}).To(PanicWith(panicMessage))
 		})
 
 		It("should panic if any of the commands' orders are less than 1", func() {
+			mock.SetUp(GinkgoT())
+
+			helpCommand = mock.Mock[Command]()
+			mock.WhenSingle(helpCommand.Name()).ThenReturn("help")
+			mock.WhenSingle(helpCommand.Order()).ThenReturn(0)
+
 			Expect(func() {
 				NewCommandRegistry(
-					test.NewCommandDouble("help", 0),
-					test.NewCommandDouble("version", 2),
-					test.NewCommandDouble("attune", 3),
-					test.NewCommandDouble("config", 4),
-					test.NewCommandDouble("package", 5),
+					helpCommand,
+					versionCommand,
+					attuneCommand,
+					configCommand,
+					packageCommand,
 				)
 			}).To(PanicWith(panicMessage))
 		})
 
 		It("should panic if any of the commands' orders are greater than the number of commands", func() {
+			mock.SetUp(GinkgoT())
+
+			packageCommand = mock.Mock[Command]()
+			mock.WhenSingle(packageCommand.Name()).ThenReturn("package")
+			mock.WhenSingle(packageCommand.Order()).ThenReturn(6)
+
 			Expect(func() {
 				NewCommandRegistry(
-					test.NewCommandDouble("help", 1),
-					test.NewCommandDouble("version", 2),
-					test.NewCommandDouble("attune", 3),
-					test.NewCommandDouble("config", 4),
-					test.NewCommandDouble("package", 6),
+					helpCommand,
+					versionCommand,
+					attuneCommand,
+					configCommand,
+					packageCommand,
 				)
 			}).To(PanicWith(panicMessage))
 		})
 
 		It("should panic if any of the commands' orders are not unique", func() {
+			mock.SetUp(GinkgoT())
+
+			configCommand = mock.Mock[Command]()
+			mock.WhenSingle(configCommand.Name()).ThenReturn("config")
+			mock.WhenSingle(configCommand.Order()).ThenReturn(3)
+
 			Expect(func() {
 				NewCommandRegistry(
-					test.NewCommandDouble("help", 1),
-					test.NewCommandDouble("version", 2),
-					test.NewCommandDouble("attune", 3),
-					test.NewCommandDouble("config", 3),
-					test.NewCommandDouble("package", 5),
+					helpCommand,
+					versionCommand,
+					attuneCommand,
+					configCommand,
+					packageCommand,
 				)
 			}).To(PanicWith(panicMessage))
 		})
