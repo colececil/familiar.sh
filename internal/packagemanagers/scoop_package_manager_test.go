@@ -8,23 +8,23 @@ import (
 	"github.com/colececil/familiar.sh/internal/system"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/ovechkin-dm/mockio/mock"
+	"regexp"
 	"strings"
-
-	"github.com/colececil/familiar.sh/internal/test"
 )
 
 var _ = Describe("ScoopPackageManager", func() {
 	var operatingSystemService *system.OperatingSystemService
-	var shellCommandServiceDouble *test.ShellCommandServiceDouble
+	var shellCommandService *system.ShellCommandService
 	var outputWriterDouble *bytes.Buffer
 	var scoopPackageManager *ScoopPackageManager
 
 	BeforeEach(func() {
+		mock.SetUp(GinkgoT())
 		operatingSystemService = system.NewOperatingSystemService(system.WindowsOperatingSystem)
-		shellCommandServiceDouble = test.NewShellCommandServiceDouble()
+		shellCommandService = mock.Mock[*system.ShellCommandService]()
 		outputWriterDouble = new(bytes.Buffer)
-		scoopPackageManager = NewScoopPackageManager(operatingSystemService,
-			shellCommandServiceDouble.ShellCommandService, outputWriterDouble)
+		scoopPackageManager = NewScoopPackageManager(operatingSystemService, shellCommandService, outputWriterDouble)
 	})
 
 	Describe("Name", func() {
@@ -42,16 +42,16 @@ var _ = Describe("ScoopPackageManager", func() {
 
 		It("should return false if running on macOS", func() {
 			operatingSystemService = system.NewOperatingSystemService(system.MacOsOperatingSystem)
-			scoopPackageManager = NewScoopPackageManager(operatingSystemService,
-				shellCommandServiceDouble.ShellCommandService, outputWriterDouble)
+			scoopPackageManager = NewScoopPackageManager(operatingSystemService, shellCommandService,
+				outputWriterDouble)
 			result := scoopPackageManager.IsSupported()
 			Expect(result).To(BeFalse())
 		})
 
 		It("should return false if running on Linux", func() {
 			operatingSystemService = system.NewOperatingSystemService(system.LinuxOperatingSystem)
-			scoopPackageManager = NewScoopPackageManager(operatingSystemService,
-				shellCommandServiceDouble.ShellCommandService, outputWriterDouble)
+			scoopPackageManager = NewScoopPackageManager(operatingSystemService, shellCommandService,
+				outputWriterDouble)
 			result := scoopPackageManager.IsSupported()
 			Expect(result).To(BeFalse())
 		})
@@ -59,12 +59,20 @@ var _ = Describe("ScoopPackageManager", func() {
 
 	Describe("IsInstalled", func() {
 		It("should write output stating it is checking if Scoop is installed", func() {
-			scoopPackageManager.IsInstalled()
+			_, _ = scoopPackageManager.IsInstalled()
 			Expect(outputWriterDouble.String()).To(Equal("Checking if package manager \"scoop\" is installed...\n"))
 		})
 
 		It("should return true if `scoop --version` runs successfully", func() {
-			shellCommandServiceDouble.SetOutputForExpectedInputs("scoop output", "scoop", false, "--version")
+			mock.SetUp(GinkgoT())
+
+			mock.WhenDouble(shellCommandService.RunShellCommand(
+				"scoop",
+				mock.Any[bool](),
+				mock.Any[*regexp.Regexp](),
+				"--version",
+			)).ThenReturn("scoop output", nil)
+
 			result, err := scoopPackageManager.IsInstalled()
 			Expect(err).To(BeNil())
 			Expect(result).To(BeTrue())
@@ -84,11 +92,11 @@ var _ = Describe("ScoopPackageManager", func() {
 		})
 
 		It("should run the Scoop install process and show its output", func() {
-			shellCommandServiceDouble.SetOutputForExpectedInputs("scoop installation output", "powershell", true,
+			shellCommandService.SetOutputForExpectedInputs("scoop installation output", "powershell", true,
 				"irm get.scoop.sh | iex")
 			err := scoopPackageManager.Install()
 			Expect(err).To(BeNil())
-			Expect(shellCommandServiceDouble.WasCalledWith("powershell", true, "irm get.scoop.sh | iex")).To(BeTrue())
+			Expect(shellCommandService.WasCalledWith("powershell", true, "irm get.scoop.sh | iex")).To(BeTrue())
 		})
 
 		It("should return an error if the Scoop install process returns an error", func() {
@@ -107,10 +115,10 @@ var _ = Describe("ScoopPackageManager", func() {
 			commandOutput := `some output
 some more output
 Scoop was updated successfully!`
-			shellCommandServiceDouble.SetOutputForExpectedInputs(commandOutput, "scoop", true, "update")
+			shellCommandService.SetOutputForExpectedInputs(commandOutput, "scoop", true, "update")
 			err := scoopPackageManager.Update()
 			Expect(err).To(BeNil())
-			Expect(shellCommandServiceDouble.WasCalledWith("scoop", true, "update")).To(BeTrue())
+			Expect(shellCommandService.WasCalledWith("scoop", true, "update")).To(BeTrue())
 		})
 
 		It("should return an error if `scoop update` returns an error", func() {
@@ -119,7 +127,7 @@ Scoop was updated successfully!`
 		})
 
 		It("should return an error if `scoop update` output does not contain \"Scoop was updated\"", func() {
-			shellCommandServiceDouble.SetOutputForExpectedInputs("scoop update output", "scoop", true, "update")
+			shellCommandService.SetOutputForExpectedInputs("scoop update output", "scoop", true, "update")
 			err := scoopPackageManager.Update()
 			Expect(err).NotTo(BeNil())
 		})
@@ -135,10 +143,10 @@ Scoop was updated successfully!`
 			commandOutput := `some output
 some more output
 'scoop' was uninstalled.`
-			shellCommandServiceDouble.SetOutputForExpectedInputs(commandOutput, "scoop", true, "uninstall", "scoop")
+			shellCommandService.SetOutputForExpectedInputs(commandOutput, "scoop", true, "uninstall", "scoop")
 			err := scoopPackageManager.Uninstall()
 			Expect(err).To(BeNil())
-			Expect(shellCommandServiceDouble.WasCalledWith("scoop", true, "uninstall", "scoop")).To(BeTrue())
+			Expect(shellCommandService.WasCalledWith("scoop", true, "uninstall", "scoop")).To(BeTrue())
 		})
 
 		It("should return an error if `scoop uninstall scoop` returns an error", func() {
@@ -148,7 +156,7 @@ some more output
 
 		It("should return an error if `scoop uninstall scoop` output does not contain \"'scoop' was uninstalled\"",
 			func() {
-				shellCommandServiceDouble.SetOutputForExpectedInputs("scoop uninstall output", "scoop", true,
+				shellCommandService.SetOutputForExpectedInputs("scoop uninstall output", "scoop", true,
 					"uninstall", "scoop")
 				err := scoopPackageManager.Uninstall()
 				Expect(err).NotTo(BeNil())
@@ -160,8 +168,8 @@ some more output
 		var scoopStatusOutput string
 
 		JustBeforeEach(func() {
-			shellCommandServiceDouble.SetOutputForExpectedInputs(scoopExportOutput, "scoop", false, "export")
-			shellCommandServiceDouble.SetOutputForExpectedInputs(scoopStatusOutput, "scoop", false, "status")
+			shellCommandService.SetOutputForExpectedInputs(scoopExportOutput, "scoop", false, "export")
+			shellCommandService.SetOutputForExpectedInputs(scoopStatusOutput, "scoop", false, "status")
 		})
 
 		It("should write output stating it is getting installed package information", func() {
@@ -349,7 +357,7 @@ package3 3.2.1 4.0.0
 some more output
 '%s' (%s) was installed successfully!`
 			commandOutput = fmt.Sprintf(commandOutput, packageName, packageVersion)
-			shellCommandServiceDouble.SetOutputForExpectedInputs(commandOutput, "scoop", true, "install", packageName)
+			shellCommandService.SetOutputForExpectedInputs(commandOutput, "scoop", true, "install", packageName)
 			result, err := scoopPackageManager.InstallPackage(packageName, nil)
 			Expect(err).To(BeNil())
 			Expect(result.String()).To(Equal(packageVersion))
@@ -362,7 +370,7 @@ some more output
 
 		It("should return an error if the `scoop install` command output does not contain \"'<package>' (<version>) "+
 			"was installed\"", func() {
-			shellCommandServiceDouble.SetOutputForExpectedInputs("some output", "scoop", true, "install", packageName)
+			shellCommandService.SetOutputForExpectedInputs("some output", "scoop", true, "install", packageName)
 			_, err := scoopPackageManager.InstallPackage(packageName, nil)
 			Expect(err).To(Not(BeNil()))
 		})
@@ -382,7 +390,7 @@ some more output
 some more output
 '%s' (%s) was installed successfully!`
 			commandOutput = fmt.Sprintf(commandOutput, packageName, packageVersion)
-			shellCommandServiceDouble.SetOutputForExpectedInputs(commandOutput, "scoop", true, "update", packageName)
+			shellCommandService.SetOutputForExpectedInputs(commandOutput, "scoop", true, "update", packageName)
 			result, err := scoopPackageManager.UpdatePackage(packageName, nil)
 			Expect(err).To(BeNil())
 			Expect(result.String()).To(Equal(packageVersion))
@@ -395,7 +403,7 @@ some more output
 
 		It("should return an error if the `scoop update` command output does not contain \"'<package>' (<version>) "+
 			"was installed\"", func() {
-			shellCommandServiceDouble.SetOutputForExpectedInputs("some output", "scoop", true, "update", packageName)
+			shellCommandService.SetOutputForExpectedInputs("some output", "scoop", true, "update", packageName)
 			_, err := scoopPackageManager.UpdatePackage(packageName, nil)
 			Expect(err).To(Not(BeNil()))
 		})
@@ -414,7 +422,7 @@ some more output
 some more output
 '%s' was uninstalled.`
 			commandOutput = fmt.Sprintf(commandOutput, packageName)
-			shellCommandServiceDouble.SetOutputForExpectedInputs(commandOutput, "scoop", true, "uninstall", packageName)
+			shellCommandService.SetOutputForExpectedInputs(commandOutput, "scoop", true, "uninstall", packageName)
 			err := scoopPackageManager.UninstallPackage(packageName)
 			Expect(err).To(BeNil())
 		})
@@ -426,7 +434,7 @@ some more output
 
 		It("should return an error if the `scoop uninstall` command output does not contain \"'<package>' "+
 			"was uninstalled\"", func() {
-			shellCommandServiceDouble.SetOutputForExpectedInputs("some output", "scoop", true, "uninstall", packageName)
+			shellCommandService.SetOutputForExpectedInputs("some output", "scoop", true, "uninstall", packageName)
 			err := scoopPackageManager.UninstallPackage(packageName)
 			Expect(err).To(Not(BeNil()))
 		})
