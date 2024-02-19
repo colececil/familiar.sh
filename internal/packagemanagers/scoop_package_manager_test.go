@@ -87,16 +87,18 @@ var _ = Describe("ScoopPackageManager", func() {
 
 	Describe("Install", func() {
 		It("should write output stating it is installing Scoop", func() {
-			scoopPackageManager.Install()
+			_ = scoopPackageManager.Install()
 			Expect(outputWriterDouble.String()).To(Equal("Installing package manager \"scoop\"...\n"))
 		})
 
 		It("should run the Scoop install process and show its output", func() {
-			shellCommandService.SetOutputForExpectedInputs("scoop installation output", "powershell", true,
-				"irm get.scoop.sh | iex")
+			mock.SetUp(GinkgoT())
+
 			err := scoopPackageManager.Install()
+
 			Expect(err).To(BeNil())
-			Expect(shellCommandService.WasCalledWith("powershell", true, "irm get.scoop.sh | iex")).To(BeTrue())
+			_, _ = mock.Verify(shellCommandService, mock.Once()).
+				RunShellCommand("powershell", true, nil, "irm get.scoop.sh | iex")
 		})
 
 		It("should return an error if the Scoop install process returns an error", func() {
@@ -107,7 +109,7 @@ var _ = Describe("ScoopPackageManager", func() {
 
 	Describe("Update", func() {
 		It("should write output stating it is updating Scoop", func() {
-			scoopPackageManager.Update()
+			_ = scoopPackageManager.Update()
 			Expect(outputWriterDouble.String()).To(Equal("Updating package manager \"scoop\"...\n"))
 		})
 
@@ -135,7 +137,7 @@ Scoop was updated successfully!`
 
 	Describe("Uninstall", func() {
 		It("should write output stating it is uninstalling Scoop", func() {
-			scoopPackageManager.Uninstall()
+			_ = scoopPackageManager.Uninstall()
 			Expect(outputWriterDouble.String()).To(Equal("Uninstalling package manager \"scoop\"...\n"))
 		})
 
@@ -173,7 +175,7 @@ some more output
 		})
 
 		It("should write output stating it is getting installed package information", func() {
-			scoopPackageManager.InstalledPackages()
+			_, _ = scoopPackageManager.InstalledPackages()
 			Expect(outputWriterDouble.String()).To(Equal(
 				"Getting installed package information from package manager \"scoop\"...\n"))
 		})
@@ -348,7 +350,7 @@ package3 3.2.1 4.0.0
 		const packageVersion = "1.0.0"
 
 		It("should write output stating it is installing the given package", func() {
-			scoopPackageManager.InstallPackage(packageName, nil)
+			_, _ = scoopPackageManager.InstallPackage(packageName, nil)
 			Expect(outputWriterDouble.String()).To(Equal(fmt.Sprintf("Installing package \"%s\"...\n", packageName)))
 		})
 
@@ -381,7 +383,7 @@ some more output
 		const packageVersion = "1.0.1"
 
 		It("should write output stating it is updating the given package", func() {
-			scoopPackageManager.UpdatePackage(packageName, nil)
+			_, _ = scoopPackageManager.UpdatePackage(packageName, nil)
 			Expect(outputWriterDouble.String()).To(Equal(fmt.Sprintf("Updating package \"%s\"...\n", packageName)))
 		})
 
@@ -413,7 +415,7 @@ some more output
 		const packageName = "package1"
 
 		It("should write output stating it is uninstalling the given package", func() {
-			scoopPackageManager.UninstallPackage(packageName)
+			_ = scoopPackageManager.UninstallPackage(packageName)
 			Expect(outputWriterDouble.String()).To(Equal(fmt.Sprintf("Uninstalling package \"%s\"...\n", packageName)))
 		})
 
@@ -473,8 +475,8 @@ func createScoopExportOutput(apps []scoopExportApp) string {
 		Apps:    apps,
 	}
 
-	if bytes, err := json.Marshal(data); err == nil {
-		return string(bytes)
+	if jsonBytes, err := json.Marshal(data); err == nil {
+		return string(jsonBytes)
 	}
 	return ""
 }

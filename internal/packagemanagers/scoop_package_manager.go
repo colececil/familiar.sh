@@ -12,18 +12,21 @@ import (
 
 // ScoopPackageManager implements the PackageManager interface for the Scoop package manager.
 type ScoopPackageManager struct {
-	operatingSystemService *system.OperatingSystemService
-	shellCommandService    *system.ShellCommandService
-	outputWriter           io.Writer
+	outputWriter              io.Writer
+	operatingSystemService    *system.OperatingSystemService
+	shellCommandRunnerCreator ShellCommandRunnerCreator
 }
 
+type ShellCommandRunnerCreator func(outputWriter io.Writer, program string, args ...string) system.ShellCommandRunner
+
 // NewScoopPackageManager returns a new instance of ScoopPackageManager.
-func NewScoopPackageManager(operatingSystemService *system.OperatingSystemService,
-	shellCommandService *system.ShellCommandService, outputWriter io.Writer) *ScoopPackageManager {
+func NewScoopPackageManager(outputWriter io.Writer, operatingSystemService *system.OperatingSystemService,
+	shellCommandRunnerCreator ShellCommandRunnerCreator) *ScoopPackageManager {
+
 	return &ScoopPackageManager{
-		operatingSystemService: operatingSystemService,
-		shellCommandService:    shellCommandService,
-		outputWriter:           outputWriter,
+		operatingSystemService:    operatingSystemService,
+		outputWriter:              outputWriter,
+		shellCommandRunnerCreator: shellCommandRunnerCreator,
 	}
 }
 
@@ -49,7 +52,8 @@ func (s *ScoopPackageManager) IsInstalled() (bool, error) {
 		return false, err
 	}
 
-	_, err = s.shellCommandService.RunShellCommand(s.Name(), false, nil, "--version")
+	shellCommand := s.shellCommandRunnerCreator(nil, s.Name(), "--version")
+	_, err = shellCommand.Run(nil)
 	if err != nil {
 		return false, nil
 	}
