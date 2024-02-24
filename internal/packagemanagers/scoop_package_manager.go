@@ -69,7 +69,8 @@ func (s *ScoopPackageManager) Install() error {
 		return err
 	}
 
-	_, err = s.shellCommandService.RunShellCommand("powershell", true, nil, "irm get.scoop.sh | iex")
+	shellCommand := s.shellCommandRunnerCreator(s.outputWriter, "powershell", "irm get.scoop.sh | iex")
+	_, err = shellCommand.Run(nil)
 	if err != nil {
 		return err
 	}
@@ -91,7 +92,8 @@ func (s *ScoopPackageManager) Update() error {
 		return err
 	}
 
-	capturedSuccess, err := s.shellCommandService.RunShellCommand(s.Name(), true, successRegex, "update")
+	shellCommand := s.shellCommandRunnerCreator(s.outputWriter, s.Name(), "update")
+	capturedSuccess, err := shellCommand.Run(successRegex)
 	if err != nil || capturedSuccess == "" {
 		if err == nil {
 			err = fmt.Errorf("error updating package manager \"%s\"", s.Name())
@@ -116,7 +118,8 @@ func (s *ScoopPackageManager) Uninstall() error {
 		return err
 	}
 
-	capturedSuccess, err := s.shellCommandService.RunShellCommand(s.Name(), true, successRegex, "uninstall", s.Name())
+	shellCommand := s.shellCommandRunnerCreator(s.outputWriter, s.Name(), "uninstall", s.Name())
+	capturedSuccess, err := shellCommand.Run(successRegex)
 	if err != nil || capturedSuccess == "" {
 		if err == nil {
 			err = fmt.Errorf("error uninstalling package manager \"%s\"", s.Name())
@@ -140,7 +143,8 @@ func (s *ScoopPackageManager) InstalledPackages() ([]*Package, error) {
 		return nil, err
 	}
 
-	capturedJson, err := s.shellCommandService.RunShellCommand(s.Name(), false, jsonCaptureRegex, "export")
+	shellCommand := s.shellCommandRunnerCreator(nil, s.Name(), "export")
+	capturedJson, err := shellCommand.Run(jsonCaptureRegex)
 	if err != nil {
 		return nil, err
 	}
@@ -168,8 +172,8 @@ func (s *ScoopPackageManager) InstalledPackages() ([]*Package, error) {
 		return nil, err
 	}
 
-	capturedPackages, err := s.shellCommandService.RunShellCommand(s.Name(), false,
-		packagesCaptureRegex, "status")
+	shellCommand = s.shellCommandRunnerCreator(nil, s.Name(), "status")
+	capturedPackages, err := shellCommand.Run(packagesCaptureRegex)
 	if err != nil {
 		return nil, err
 	}
@@ -219,8 +223,8 @@ func (s *ScoopPackageManager) InstallPackage(packageName string, version *Versio
 		return nil, err
 	}
 
-	capturedVersion, err := s.shellCommandService.RunShellCommand(s.Name(), true, versionCaptureRegex, "install",
-		packageName)
+	shellCommand := s.shellCommandRunnerCreator(s.outputWriter, s.Name(), "install", packageName)
+	capturedVersion, err := shellCommand.Run(versionCaptureRegex)
 	if err != nil || capturedVersion == "" {
 		if err == nil {
 			err = fmt.Errorf("error installing package")
@@ -247,8 +251,8 @@ func (s *ScoopPackageManager) UpdatePackage(packageName string, version *Version
 		return nil, err
 	}
 
-	capturedVersion, err := s.shellCommandService.RunShellCommand(s.Name(), true,
-		versionCaptureRegex, "update", packageName)
+	shellCommand := s.shellCommandRunnerCreator(s.outputWriter, s.Name(), "update", packageName)
+	capturedVersion, err := shellCommand.Run(versionCaptureRegex)
 	if err != nil || capturedVersion == "" {
 		if err == nil {
 			err = fmt.Errorf("error updating package")
@@ -273,8 +277,8 @@ func (s *ScoopPackageManager) UninstallPackage(packageName string) error {
 		return err
 	}
 
-	capturedSuccess, err := s.shellCommandService.RunShellCommand(s.Name(), true, successRegex, "uninstall",
-		packageName)
+	shellCommand := s.shellCommandRunnerCreator(s.outputWriter, s.Name(), "uninstall", packageName)
+	capturedSuccess, err := shellCommand.Run(successRegex)
 	if err != nil || capturedSuccess == "" {
 		if err == nil {
 			err = fmt.Errorf("error uninstalling package")

@@ -15,10 +15,9 @@ import (
 	"time"
 )
 
-var _ = Describe("ShellCommandService", func() {
-	var shellCommandDouble *test.ShellCommandDouble
-	var outputWriterDouble *bytes.Buffer
-	var shellCommandService *ShellCommandService
+var _ = Describe("ShellCommandRunner", func() {
+	var outputWriter *bytes.Buffer
+	var shellCommandRunner ShellCommandRunner
 
 	const expectedProgram = "program"
 	const expectedProgramArg = "arg"
@@ -31,33 +30,14 @@ the program's error output
 	const programExitCode = 0
 
 	BeforeEach(func() {
-		createShellCommandFuncDouble := func(program string, args ...string) ShellCommand {
-			if program == expectedProgram && len(args) == 1 && args[0] == expectedProgramArg {
-				return shellCommandDouble
-			}
-			return NewRealShellCommand("")
-		}
-
-		shellCommandDouble = test.NewShellCommandDouble(
-			func(stdoutWriter io.Writer, stderrWriter io.Writer, errorChannel chan<- error,
-				exitCodeChannel chan<- int) {
-
-				exitCodeChannel <- programExitCode
-			},
-		)
-
-		outputWriterDouble = new(bytes.Buffer)
-
-		shellCommandService = NewShellCommandService(
-			createShellCommandFuncDouble,
-			NewRunShellCommandFunc(),
-			outputWriterDouble,
-		)
+		outputWriter = new(bytes.Buffer)
 	})
 
 	Describe("RunShellCommand", func() {
-		When("`printOutput` is set to `true`", func() {
+		When("the ShellCommandRunner was created with an outputWriter", func() {
 			It("should print the command output", func() {
+				shellCommandRunner := NewShellCommandRunner(outputWriter, expectedProgram, expectedProgramArg)
+
 				shellCommandDouble = test.NewShellCommandDouble(
 					func(stdoutWriter io.Writer, stderrWriter io.Writer, errorChannel chan<- error,
 						exitCodeChannel chan<- int) {
@@ -70,7 +50,7 @@ the program's error output
 				_, err := shellCommandService.RunShellCommand(expectedProgram, true, nil, expectedProgramArg)
 
 				Expect(err).To(BeNil())
-				Expect(outputWriterDouble.String()).To(Equal(programStdout))
+				Expect(outputWriter.String()).To(Equal(programStdout))
 			})
 
 			It("should print both the stdout and stderr command output", func() {
@@ -88,7 +68,7 @@ the program's error output
 				_, err := shellCommandService.RunShellCommand(expectedProgram, true, nil, expectedProgramArg)
 
 				Expect(err).To(BeNil())
-				Expect(outputWriterDouble.String()).To(Equal(programStdout + programStderr))
+				Expect(outputWriter.String()).To(Equal(programStdout + programStderr))
 			})
 
 			It("should print each line of the command output as soon as it becomes available", func() {
@@ -122,27 +102,27 @@ the program's error output
 
 						_, _ = stdoutWriter.Write([]byte(stdoutLine1 + "\n"))
 						time.Sleep(100 * time.Millisecond)
-						outputChannel <- outputWriterDouble.String()
+						outputChannel <- outputWriter.String()
 
 						_, _ = stderrWriter.Write([]byte(stderrLine1))
 						time.Sleep(100 * time.Millisecond)
-						outputChannel <- outputWriterDouble.String()
+						outputChannel <- outputWriter.String()
 
 						_, _ = stderrWriter.Write([]byte("\n"))
 						time.Sleep(100 * time.Millisecond)
-						outputChannel <- outputWriterDouble.String()
+						outputChannel <- outputWriter.String()
 
 						_, _ = stdoutWriter.Write([]byte(stdoutLine2 + "\n"))
 						time.Sleep(100 * time.Millisecond)
-						outputChannel <- outputWriterDouble.String()
+						outputChannel <- outputWriter.String()
 
 						_, _ = stdoutWriter.Write([]byte(stdoutLine3 + "\n"))
 						time.Sleep(100 * time.Millisecond)
-						outputChannel <- outputWriterDouble.String()
+						outputChannel <- outputWriter.String()
 
 						_, _ = stdoutWriter.Write([]byte(stderrLine2))
 						time.Sleep(100 * time.Millisecond)
-						outputChannel <- outputWriterDouble.String()
+						outputChannel <- outputWriter.String()
 
 						exitCodeChannel <- programExitCode
 					},
@@ -151,13 +131,13 @@ the program's error output
 				_, err := shellCommandService.RunShellCommand(expectedProgram, true, nil, expectedProgramArg)
 
 				Expect(err).To(BeNil())
-				Expect(outputWriterDouble.String()).To(Equal(stdoutLine1 + "\n" + stderrLine1 + "\n" + stdoutLine2 +
+				Expect(outputWriter.String()).To(Equal(stdoutLine1 + "\n" + stderrLine1 + "\n" + stdoutLine2 +
 					"\n" + stdoutLine3 + "\n" + stderrLine2 + "\n"))
 				Eventually(testCompletionChannel).Should(Receive())
 			})
 		})
 
-		When("`printOutput` is set to `false`", func() {
+		When("the ShellCommandRunner was created without an outputWriter", func() {
 			It("should not print the command output", func() {
 				shellCommandDouble = test.NewShellCommandDouble(
 					func(stdoutWriter io.Writer, stderrWriter io.Writer, errorChannel chan<- error,
@@ -172,7 +152,7 @@ the program's error output
 				_, err := shellCommandService.RunShellCommand(expectedProgram, false, nil, expectedProgramArg)
 
 				Expect(err).To(BeNil())
-				Expect(outputWriterDouble.String()).To(Equal(""))
+				Expect(outputWriter.String()).To(Equal(""))
 			})
 		})
 

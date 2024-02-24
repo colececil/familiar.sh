@@ -23,6 +23,7 @@ var providers = wire.NewSet(
 	getCurrentOperatingSystem,
 	getCommands,
 	getPackageManagers,
+	getShellCommandRunnerCreator,
 	getXdgConfigHomeGetter,
 	getAbsPathConverter,
 	getDirPathGetter,
@@ -44,9 +45,6 @@ var providers = wire.NewSet(
 	packagemanagers.NewChocolateyPackageManager,
 	packagemanagers.NewHomebrewPackageManager,
 	system.NewOperatingSystemService,
-	system.NewCreateShellCommandFunc,
-	system.NewRunShellCommandFunc,
-	system.NewShellCommandService,
 )
 
 // InitializeCommandRegistry tells Wire how to create an injector for CommandRegistry.
@@ -89,6 +87,11 @@ func getPackageManagers(
 		chocolateyPackageManager,
 		homebrewPackageManager,
 	}
+}
+
+// getShellCommandRunnerCreator returns system.NewShellCommandRunner as a packagemanagers.ShellCommandRunnerCreator.
+func getShellCommandRunnerCreator() packagemanagers.ShellCommandRunnerCreator {
+	return packagemanagers.ShellCommandRunnerCreator(system.NewShellCommandRunner)
 }
 
 // getCurrentOperatingSystem returns the current operating system.

@@ -10,10 +10,24 @@ import (
 	"sync"
 )
 
+// ShellCommandRunner is an interface that provides a method to run a shell command and capture its output.
 type ShellCommandRunner interface {
+	// Run runs the shell command that was specified when creating the ShellCommandRunner. It optionally takes in a
+	// regular expression that is matched against the complete  stdout output of the command. If there is a match, the
+	// match of its first capturing group will be returned. If there is no match or no regular expression is provided,
+	// an empty string will be returned.
+	//
+	// Additionally, if an outputWriter was provided when creating the ShellCommandRunner, both the stdout and stderr
+	// output of the command will be written to it.
+	//
+	// If there are any issues running the command or processing its output, an error will be returned.
 	Run(resultCaptureRegex *regexp.Regexp) (string, error)
 }
 
+// NewShellCommandRunner creates a new instance of a type that implements the ShellCommandRunner interface, using the
+// default implementation. If an outputWriter is provided, the output of the command will be written to it when it is
+// run. If the full output does not need to be captured, the outputWriter can be set to nil. The command to run is
+// specified by the program and args parameters.
 func NewShellCommandRunner(outputWriter io.Writer, program string, args ...string) ShellCommandRunner {
 	return ShellCommandRunner(
 		&shellCommandRunner{
@@ -23,11 +37,14 @@ func NewShellCommandRunner(outputWriter io.Writer, program string, args ...strin
 	)
 }
 
+// shellCommandRunner is the default implementation of the ShellCommandRunner interface. It runs the specified command
+// using exec.Command.
 type shellCommandRunner struct {
 	cmd          *exec.Cmd
 	outputWriter io.Writer
 }
 
+// Run implements ShellCommandRunner.Run by running the command and processing its output.
 func (r *shellCommandRunner) Run(resultCaptureRegex *regexp.Regexp) (string, error) {
 	stdout, err := r.cmd.StdoutPipe()
 	if err != nil {
