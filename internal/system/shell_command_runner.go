@@ -4,9 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"os/exec"
 	"regexp"
-	"strings"
 	"sync"
 )
 
@@ -24,14 +22,24 @@ type ShellCommandRunner interface {
 	Run(resultCaptureRegex *regexp.Regexp) (string, error)
 }
 
+// CreateShellCommandRunnerFunc is a function that creates a new instance of ShellCommandRunner.
+type CreateShellCommandRunnerFunc func(createShellCommandFunc CreateShellCommandFunc, outputWriter io.Writer,
+	program string, args ...string) ShellCommandRunner
+
 // NewShellCommandRunner creates a new instance of a type that implements the ShellCommandRunner interface, using the
-// default implementation. If an outputWriter is provided, the output of the command will be written to it when it is
-// run. If the full output does not need to be captured, the outputWriter can be set to nil. The command to run is
-// specified by the program and args parameters.
-func NewShellCommandRunner(outputWriter io.Writer, program string, args ...string) ShellCommandRunner {
+// default implementation. The input parameters are as follows:
+//
+//   - createShellCommandFunc: Used for creating the ShellCommand that will be run.
+//   - outputWriter: The destination to write the command's output to. If the full output does not need to be captured,
+//     the outputWriter can be set to nil.
+//   - program: The name of the program to run.
+//   - args: The arguments to pass to the program.
+func NewShellCommandRunner(createShellCommandFunc CreateShellCommandFunc, outputWriter io.Writer, program string,
+	args ...string) ShellCommandRunner {
+
 	return ShellCommandRunner(
 		&shellCommandRunner{
-			cmd:          exec.Command(program, args...),
+			shellCommand: createShellCommandFunc(program, args...),
 			outputWriter: outputWriter,
 		},
 	)
@@ -40,23 +48,23 @@ func NewShellCommandRunner(outputWriter io.Writer, program string, args ...strin
 // shellCommandRunner is the default implementation of the ShellCommandRunner interface. It runs the specified command
 // using exec.Command.
 type shellCommandRunner struct {
-	cmd          *exec.Cmd
+	shellCommand ShellCommand
 	outputWriter io.Writer
 }
 
 // Run implements ShellCommandRunner.Run by running the command and processing its output.
 func (r *shellCommandRunner) Run(resultCaptureRegex *regexp.Regexp) (string, error) {
-	stdout, err := r.cmd.StdoutPipe()
+	stdout, err := r.shellCommand.StdoutPipe()
 	if err != nil {
 		return "", err
 	}
 
-	stderr, err := r.cmd.StderrPipe()
+	stderr, err := r.shellCommand.StderrPipe()
 	if err != nil {
 		return "", err
 	}
 
-	if err := r.cmd.Start(); err != nil {
+	if err := r.shellCommand.Start(); err != nil {
 		return "", err
 	}
 
@@ -68,7 +76,7 @@ func (r *shellCommandRunner) Run(resultCaptureRegex *regexp.Regexp) (string, err
 	go readLines(stdout, r.outputWriter, resultCaptureRegex, waitGroup, resultChannel, errorChannel)
 	go readLines(stderr, r.outputWriter, nil, waitGroup, resultChannel, errorChannel)
 
-	if err := r.cmd.Wait(); err != nil {
+	if err := r.shellCommand.Wait(); err != nil {
 		return "", err
 	}
 
@@ -82,9 +90,9 @@ func (r *shellCommandRunner) Run(resultCaptureRegex *regexp.Regexp) (string, err
 	default:
 	}
 
-	if exitCode := r.cmd.ProcessState.ExitCode(); exitCode != 0 {
+	if exitCode := r.shellCommand.ExitCode(); exitCode != 0 {
 		return "",
-			fmt.Errorf("error running command \"%s\", with exit code %d", strings.Join(r.cmd.Args, " "), exitCode)
+			fmt.Errorf("error running command \"%v\", with exit code %d", r.shellCommand, exitCode)
 	}
 
 	return result, nil

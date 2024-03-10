@@ -23,7 +23,8 @@ var providers = wire.NewSet(
 	getCurrentOperatingSystem,
 	getCommands,
 	getPackageManagers,
-	getShellCommandRunnerCreator,
+	getCreateShellCommandFunc,
+	getCreateShellCommandRunnerFunc,
 	getXdgConfigHomeGetter,
 	getAbsPathConverter,
 	getDirPathGetter,
@@ -89,9 +90,14 @@ func getPackageManagers(
 	}
 }
 
-// getShellCommandRunnerCreator returns system.NewShellCommandRunner as a packagemanagers.ShellCommandRunnerCreator.
-func getShellCommandRunnerCreator() packagemanagers.ShellCommandRunnerCreator {
-	return packagemanagers.ShellCommandRunnerCreator(system.NewShellCommandRunner)
+// getCreateShellCommandFunc returns system.NewShellCommand as a system.CreateShellCommandFunc.
+func getCreateShellCommandFunc() system.CreateShellCommandFunc {
+	return system.NewShellCommand
+}
+
+// getCreateShellCommandRunnerFunc returns system.NewShellCommandRunner as a system.CreateShellCommandRunnerFunc.
+func getCreateShellCommandRunnerFunc() system.CreateShellCommandRunnerFunc {
+	return system.NewShellCommandRunner
 }
 
 // getCurrentOperatingSystem returns the current operating system.

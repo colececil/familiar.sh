@@ -12,21 +12,22 @@ import (
 
 // ScoopPackageManager implements the PackageManager interface for the Scoop package manager.
 type ScoopPackageManager struct {
-	outputWriter              io.Writer
-	operatingSystemService    *system.OperatingSystemService
-	shellCommandRunnerCreator ShellCommandRunnerCreator
+	outputWriter                 io.Writer
+	operatingSystemService       *system.OperatingSystemService
+	createShellCommandFunc       system.CreateShellCommandFunc
+	createShellCommandRunnerFunc system.CreateShellCommandRunnerFunc
 }
-
-type ShellCommandRunnerCreator func(outputWriter io.Writer, program string, args ...string) system.ShellCommandRunner
 
 // NewScoopPackageManager returns a new instance of ScoopPackageManager.
 func NewScoopPackageManager(outputWriter io.Writer, operatingSystemService *system.OperatingSystemService,
-	shellCommandRunnerCreator ShellCommandRunnerCreator) *ScoopPackageManager {
+	createShellCommandFunc system.CreateShellCommandFunc,
+	createShellCommandRunnerFunc system.CreateShellCommandRunnerFunc) *ScoopPackageManager {
 
 	return &ScoopPackageManager{
-		operatingSystemService:    operatingSystemService,
-		outputWriter:              outputWriter,
-		shellCommandRunnerCreator: shellCommandRunnerCreator,
+		operatingSystemService:       operatingSystemService,
+		outputWriter:                 outputWriter,
+		createShellCommandFunc:       createShellCommandFunc,
+		createShellCommandRunnerFunc: createShellCommandRunnerFunc,
 	}
 }
 
@@ -52,8 +53,8 @@ func (s *ScoopPackageManager) IsInstalled() (bool, error) {
 		return false, err
 	}
 
-	shellCommand := s.shellCommandRunnerCreator(nil, s.Name(), "--version")
-	_, err = shellCommand.Run(nil)
+	shellCommandRunner := s.createShellCommandRunnerFunc(s.createShellCommandFunc, nil, s.Name(), "--version")
+	_, err = shellCommandRunner.Run(nil)
 	if err != nil {
 		return false, nil
 	}
@@ -69,8 +70,9 @@ func (s *ScoopPackageManager) Install() error {
 		return err
 	}
 
-	shellCommand := s.shellCommandRunnerCreator(s.outputWriter, "powershell", "irm get.scoop.sh | iex")
-	_, err = shellCommand.Run(nil)
+	shellCommandRunner := s.createShellCommandRunnerFunc(s.createShellCommandFunc, s.outputWriter, "powershell",
+		"irm get.scoop.sh | iex")
+	_, err = shellCommandRunner.Run(nil)
 	if err != nil {
 		return err
 	}
@@ -92,8 +94,8 @@ func (s *ScoopPackageManager) Update() error {
 		return err
 	}
 
-	shellCommand := s.shellCommandRunnerCreator(s.outputWriter, s.Name(), "update")
-	capturedSuccess, err := shellCommand.Run(successRegex)
+	shellCommandRunner := s.createShellCommandRunnerFunc(s.createShellCommandFunc, s.outputWriter, s.Name(), "update")
+	capturedSuccess, err := shellCommandRunner.Run(successRegex)
 	if err != nil || capturedSuccess == "" {
 		if err == nil {
 			err = fmt.Errorf("error updating package manager \"%s\"", s.Name())
@@ -118,8 +120,9 @@ func (s *ScoopPackageManager) Uninstall() error {
 		return err
 	}
 
-	shellCommand := s.shellCommandRunnerCreator(s.outputWriter, s.Name(), "uninstall", s.Name())
-	capturedSuccess, err := shellCommand.Run(successRegex)
+	shellCommandRunner := s.createShellCommandRunnerFunc(s.createShellCommandFunc, s.outputWriter, s.Name(),
+		"uninstall", s.Name())
+	capturedSuccess, err := shellCommandRunner.Run(successRegex)
 	if err != nil || capturedSuccess == "" {
 		if err == nil {
 			err = fmt.Errorf("error uninstalling package manager \"%s\"", s.Name())
@@ -143,8 +146,8 @@ func (s *ScoopPackageManager) InstalledPackages() ([]*Package, error) {
 		return nil, err
 	}
 
-	shellCommand := s.shellCommandRunnerCreator(nil, s.Name(), "export")
-	capturedJson, err := shellCommand.Run(jsonCaptureRegex)
+	shellCommandRunner := s.createShellCommandRunnerFunc(s.createShellCommandFunc, nil, s.Name(), "export")
+	capturedJson, err := shellCommandRunner.Run(jsonCaptureRegex)
 	if err != nil {
 		return nil, err
 	}
@@ -172,8 +175,8 @@ func (s *ScoopPackageManager) InstalledPackages() ([]*Package, error) {
 		return nil, err
 	}
 
-	shellCommand = s.shellCommandRunnerCreator(nil, s.Name(), "status")
-	capturedPackages, err := shellCommand.Run(packagesCaptureRegex)
+	shellCommandRunner = s.createShellCommandRunnerFunc(s.createShellCommandFunc, nil, s.Name(), "status")
+	capturedPackages, err := shellCommandRunner.Run(packagesCaptureRegex)
 	if err != nil {
 		return nil, err
 	}
@@ -223,8 +226,9 @@ func (s *ScoopPackageManager) InstallPackage(packageName string, version *Versio
 		return nil, err
 	}
 
-	shellCommand := s.shellCommandRunnerCreator(s.outputWriter, s.Name(), "install", packageName)
-	capturedVersion, err := shellCommand.Run(versionCaptureRegex)
+	shellCommandRunner := s.createShellCommandRunnerFunc(s.createShellCommandFunc, s.outputWriter, s.Name(), "install",
+		packageName)
+	capturedVersion, err := shellCommandRunner.Run(versionCaptureRegex)
 	if err != nil || capturedVersion == "" {
 		if err == nil {
 			err = fmt.Errorf("error installing package")
@@ -251,8 +255,9 @@ func (s *ScoopPackageManager) UpdatePackage(packageName string, version *Version
 		return nil, err
 	}
 
-	shellCommand := s.shellCommandRunnerCreator(s.outputWriter, s.Name(), "update", packageName)
-	capturedVersion, err := shellCommand.Run(versionCaptureRegex)
+	shellCommandRunner := s.createShellCommandRunnerFunc(s.createShellCommandFunc, s.outputWriter, s.Name(), "update",
+		packageName)
+	capturedVersion, err := shellCommandRunner.Run(versionCaptureRegex)
 	if err != nil || capturedVersion == "" {
 		if err == nil {
 			err = fmt.Errorf("error updating package")
@@ -277,8 +282,9 @@ func (s *ScoopPackageManager) UninstallPackage(packageName string) error {
 		return err
 	}
 
-	shellCommand := s.shellCommandRunnerCreator(s.outputWriter, s.Name(), "uninstall", packageName)
-	capturedSuccess, err := shellCommand.Run(successRegex)
+	shellCommandRunner := s.createShellCommandRunnerFunc(s.createShellCommandFunc, s.outputWriter, s.Name(),
+		"uninstall", packageName)
+	capturedSuccess, err := shellCommandRunner.Run(successRegex)
 	if err != nil || capturedSuccess == "" {
 		if err == nil {
 			err = fmt.Errorf("error uninstalling package")
