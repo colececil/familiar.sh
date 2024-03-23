@@ -33,7 +33,7 @@ the program's error output
 		outputWriter = new(bytes.Buffer)
 	})
 
-	Describe("RunShellCommand", func() {
+	Describe("Run", func() {
 		When("the ShellCommandRunner was created with an outputWriter", func() {
 			It("should print the command output", func() {
 				shellCommandRunner := NewShellCommandRunner(outputWriter, expectedProgram, expectedProgramArg)

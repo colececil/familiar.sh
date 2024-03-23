@@ -22,24 +22,24 @@ type ShellCommandRunner interface {
 	Run(resultCaptureRegex *regexp.Regexp) (string, error)
 }
 
-// CreateShellCommandRunnerFunc is a function that creates a new instance of ShellCommandRunner.
-type CreateShellCommandRunnerFunc func(createShellCommandFunc CreateShellCommandFunc, outputWriter io.Writer,
+// ShellCommandRunnerFactoryFunc is a function that creates a new instance of ShellCommandRunner.
+type ShellCommandRunnerFactoryFunc func(shellCommandFactory ShellCommandFactoryFunc, outputWriter io.Writer,
 	program string, args ...string) ShellCommandRunner
 
 // NewShellCommandRunner creates a new instance of a type that implements the ShellCommandRunner interface, using the
 // default implementation. The input parameters are as follows:
 //
-//   - createShellCommandFunc: Used for creating the ShellCommand that will be run.
+//   - shellCommandFactory: Used for creating the ShellCommand that will be run.
 //   - outputWriter: The destination to write the command's output to. If the full output does not need to be captured,
 //     the outputWriter can be set to nil.
 //   - program: The name of the program to run.
 //   - args: The arguments to pass to the program.
-func NewShellCommandRunner(createShellCommandFunc CreateShellCommandFunc, outputWriter io.Writer, program string,
+func NewShellCommandRunner(shellCommandFactory ShellCommandFactoryFunc, outputWriter io.Writer, program string,
 	args ...string) ShellCommandRunner {
 
 	return ShellCommandRunner(
 		&shellCommandRunner{
-			shellCommand: createShellCommandFunc(program, args...),
+			shellCommand: shellCommandFactory(program, args...),
 			outputWriter: outputWriter,
 		},
 	)

@@ -26,8 +26,8 @@ type ShellCommand interface {
 	String() string
 }
 
-// CreateShellCommandFunc is a function that creates a new instance of ShellCommand.
-type CreateShellCommandFunc func(program string, args ...string) ShellCommand
+// ShellCommandFactoryFunc is a function that creates a new instance of ShellCommand.
+type ShellCommandFactoryFunc func(program string, args ...string) ShellCommand
 
 // NewShellCommand creates a new instance of ShellCommand, using the default implementation. Its parameters are the
 // program and arguments of the command to run.

@@ -12,22 +12,22 @@ import (
 
 // ScoopPackageManager implements the PackageManager interface for the Scoop package manager.
 type ScoopPackageManager struct {
-	outputWriter                 io.Writer
-	operatingSystemService       *system.OperatingSystemService
-	createShellCommandFunc       system.CreateShellCommandFunc
-	createShellCommandRunnerFunc system.CreateShellCommandRunnerFunc
+	outputWriter              io.Writer
+	operatingSystemService    *system.OperatingSystemService
+	shellCommandFactory       system.ShellCommandFactoryFunc
+	shellCommandRunnerFactory system.ShellCommandRunnerFactoryFunc
 }
 
 // NewScoopPackageManager returns a new instance of ScoopPackageManager.
 func NewScoopPackageManager(outputWriter io.Writer, operatingSystemService *system.OperatingSystemService,
-	createShellCommandFunc system.CreateShellCommandFunc,
-	createShellCommandRunnerFunc system.CreateShellCommandRunnerFunc) *ScoopPackageManager {
+	shellCommandFactory system.ShellCommandFactoryFunc,
+	shellCommandRunnerFactory system.ShellCommandRunnerFactoryFunc) *ScoopPackageManager {
 
 	return &ScoopPackageManager{
-		operatingSystemService:       operatingSystemService,
-		outputWriter:                 outputWriter,
-		createShellCommandFunc:       createShellCommandFunc,
-		createShellCommandRunnerFunc: createShellCommandRunnerFunc,
+		operatingSystemService:    operatingSystemService,
+		outputWriter:              outputWriter,
+		shellCommandFactory:       shellCommandFactory,
+		shellCommandRunnerFactory: shellCommandRunnerFactory,
 	}
 }
 
@@ -53,7 +53,7 @@ func (s *ScoopPackageManager) IsInstalled() (bool, error) {
 		return false, err
 	}
 
-	shellCommandRunner := s.createShellCommandRunnerFunc(s.createShellCommandFunc, nil, s.Name(), "--version")
+	shellCommandRunner := s.shellCommandRunnerFactory(s.shellCommandFactory, nil, s.Name(), "--version")
 	_, err = shellCommandRunner.Run(nil)
 	if err != nil {
 		return false, nil
@@ -70,7 +70,7 @@ func (s *ScoopPackageManager) Install() error {
 		return err
 	}
 
-	shellCommandRunner := s.createShellCommandRunnerFunc(s.createShellCommandFunc, s.outputWriter, "powershell",
+	shellCommandRunner := s.shellCommandRunnerFactory(s.shellCommandFactory, s.outputWriter, "powershell",
 		"irm get.scoop.sh | iex")
 	_, err = shellCommandRunner.Run(nil)
 	if err != nil {
@@ -94,7 +94,7 @@ func (s *ScoopPackageManager) Update() error {
 		return err
 	}
 
-	shellCommandRunner := s.createShellCommandRunnerFunc(s.createShellCommandFunc, s.outputWriter, s.Name(), "update")
+	shellCommandRunner := s.shellCommandRunnerFactory(s.shellCommandFactory, s.outputWriter, s.Name(), "update")
 	capturedSuccess, err := shellCommandRunner.Run(successRegex)
 	if err != nil || capturedSuccess == "" {
 		if err == nil {
@@ -120,7 +120,7 @@ func (s *ScoopPackageManager) Uninstall() error {
 		return err
 	}
 
-	shellCommandRunner := s.createShellCommandRunnerFunc(s.createShellCommandFunc, s.outputWriter, s.Name(),
+	shellCommandRunner := s.shellCommandRunnerFactory(s.shellCommandFactory, s.outputWriter, s.Name(),
 		"uninstall", s.Name())
 	capturedSuccess, err := shellCommandRunner.Run(successRegex)
 	if err != nil || capturedSuccess == "" {
@@ -146,7 +146,7 @@ func (s *ScoopPackageManager) InstalledPackages() ([]*Package, error) {
 		return nil, err
 	}
 
-	shellCommandRunner := s.createShellCommandRunnerFunc(s.createShellCommandFunc, nil, s.Name(), "export")
+	shellCommandRunner := s.shellCommandRunnerFactory(s.shellCommandFactory, nil, s.Name(), "export")
 	capturedJson, err := shellCommandRunner.Run(jsonCaptureRegex)
 	if err != nil {
 		return nil, err
@@ -175,7 +175,7 @@ func (s *ScoopPackageManager) InstalledPackages() ([]*Package, error) {
 		return nil, err
 	}
 
-	shellCommandRunner = s.createShellCommandRunnerFunc(s.createShellCommandFunc, nil, s.Name(), "status")
+	shellCommandRunner = s.shellCommandRunnerFactory(s.shellCommandFactory, nil, s.Name(), "status")
 	capturedPackages, err := shellCommandRunner.Run(packagesCaptureRegex)
 	if err != nil {
 		return nil, err
@@ -226,7 +226,7 @@ func (s *ScoopPackageManager) InstallPackage(packageName string, version *Versio
 		return nil, err
 	}
 
-	shellCommandRunner := s.createShellCommandRunnerFunc(s.createShellCommandFunc, s.outputWriter, s.Name(), "install",
+	shellCommandRunner := s.shellCommandRunnerFactory(s.shellCommandFactory, s.outputWriter, s.Name(), "install",
 		packageName)
 	capturedVersion, err := shellCommandRunner.Run(versionCaptureRegex)
 	if err != nil || capturedVersion == "" {
@@ -255,7 +255,7 @@ func (s *ScoopPackageManager) UpdatePackage(packageName string, version *Version
 		return nil, err
 	}
 
-	shellCommandRunner := s.createShellCommandRunnerFunc(s.createShellCommandFunc, s.outputWriter, s.Name(), "update",
+	shellCommandRunner := s.shellCommandRunnerFactory(s.shellCommandFactory, s.outputWriter, s.Name(), "update",
 		packageName)
 	capturedVersion, err := shellCommandRunner.Run(versionCaptureRegex)
 	if err != nil || capturedVersion == "" {
@@ -282,7 +282,7 @@ func (s *ScoopPackageManager) UninstallPackage(packageName string) error {
 		return err
 	}
 
-	shellCommandRunner := s.createShellCommandRunnerFunc(s.createShellCommandFunc, s.outputWriter, s.Name(),
+	shellCommandRunner := s.shellCommandRunnerFactory(s.shellCommandFactory, s.outputWriter, s.Name(),
 		"uninstall", packageName)
 	capturedSuccess, err := shellCommandRunner.Run(successRegex)
 	if err != nil || capturedSuccess == "" {
