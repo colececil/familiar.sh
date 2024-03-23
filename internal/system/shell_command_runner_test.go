@@ -9,6 +9,7 @@ import (
 	"github.com/colececil/familiar.sh/internal/test"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/ovechkin-dm/mockio/mock"
 	"io"
 	"regexp"
 	"strings"
@@ -16,8 +17,10 @@ import (
 )
 
 var _ = Describe("ShellCommandRunner", func() {
+	var shellCommandExecutionFunc func()
+	var shellCommand ShellCommand
+	var shellCommandFactory ShellCommandFactoryFunc
 	var outputWriter *bytes.Buffer
-	var shellCommandRunner ShellCommandRunner
 
 	const expectedProgram = "program"
 	const expectedProgramArg = "arg"
@@ -30,24 +33,32 @@ the program's error output
 	const programExitCode = 0
 
 	BeforeEach(func() {
+		mock.SetUp(GinkgoT())
+
+		shellCommand = mock.Mock[ShellCommand]()
+		mock.WhenSingle(shellCommand.Start()).ThenAnswer(func(args []any) error {
+			go shellCommandExecutionFunc()
+			return nil
+		})
+
+		shellCommandFactory = mock.Mock[ShellCommandFactoryFunc]()
+		mock.WhenSingle(shellCommandFactory(expectedProgram, expectedProgramArg)).ThenReturn(shellCommand)
+
 		outputWriter = new(bytes.Buffer)
 	})
 
 	Describe("Run", func() {
 		When("the ShellCommandRunner was created with an outputWriter", func() {
 			It("should print the command output", func() {
-				shellCommandRunner := NewShellCommandRunner(outputWriter, expectedProgram, expectedProgramArg)
+				shellCommandRunner := NewShellCommandRunner(shellCommandFactory, outputWriter, expectedProgram,
+					expectedProgramArg)
 
-				shellCommandDouble = test.NewShellCommandDouble(
-					func(stdoutWriter io.Writer, stderrWriter io.Writer, errorChannel chan<- error,
-						exitCodeChannel chan<- int) {
+				shellCommandExecutionFunc = func() {
+					_, _ = stdoutWriter.Write([]byte(programStdout))
+					exitCodeChannel <- programExitCode
+				}
 
-						_, _ = stdoutWriter.Write([]byte(programStdout))
-						exitCodeChannel <- programExitCode
-					},
-				)
-
-				_, err := shellCommandService.RunShellCommand(expectedProgram, true, nil, expectedProgramArg)
+				_, err := shellCommandRunner.Run(nil)
 
 				Expect(err).To(BeNil())
 				Expect(outputWriter.String()).To(Equal(programStdout))
