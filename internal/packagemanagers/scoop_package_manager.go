@@ -159,7 +159,7 @@ func (s *ScoopPackageManager) InstalledPackages() ([]*Package, error) {
 		installedPackages[app.Name] = NewPackage(app.Name, NewVersion(app.Version), NewVersion(app.Version))
 	}
 
-	packagesCaptureRegex, err := regexp.Compile("(?s)^.*----\\n(([^\\n]*(\\n)??)*)\\n*$")
+	packagesCaptureRegex, err := regexp.Compile("(?s)^.*---- *\\n(([^\\n]*(\\n)??)*)\\n*$")
 	if err != nil {
 		return nil, err
 	}
